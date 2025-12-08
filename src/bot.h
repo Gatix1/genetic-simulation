@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <config.h>
+#include <stack>
 #pragma once
 
 class World; // Forward declaration
@@ -23,10 +24,13 @@ private:
     Vector2 position;
     int energy = INITIAL_ENERGY;
     int age = 0;
-    std::vector<unsigned int> genome = std::vector<unsigned int>(GENOME_SIZE);
+    std::vector<unsigned int> genome;
+    std::stack<unsigned int> memory;
     unsigned int pc = 0; // program counter, the index of current action in genome
     Color color = {0, 0, 255, 255}; // Default color is blue
     unsigned int direction = 1; // 0..7
+    void _memoryPush(unsigned int value);
+    unsigned int _memoryPop();
     void _constrainPosition();
     void die(World& world);
     void _reproduce(World& world);
@@ -40,6 +44,10 @@ private:
     void _checkRelative(int relative_index, World& world);
     void _shareEnergy(int relative_index, World& world);
     void _checkBiome();
+    void _checkY();
+    void _checkX();
+    void _checkEnergy();
+    void _checkAge();
     void _consumeOrganic(int relative_index, World& world);
     int _genomeDifference(const Bot& other) const;
     void _constrainPosition(Vector2 &pos);
