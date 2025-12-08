@@ -461,7 +461,7 @@ void Bot::_processGenome(World &world) {
         float bot_x = this->position.x;
 
         if (bot_x < WORLD_WIDTH / 3.0f) {
-            energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN * 1.5; // Sunny biome (left)
+            energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN; // Sunny biome (left)
         } else if (bot_x >= 2.0f * WORLD_WIDTH / 3.0f) {
             energy_gain = LOW_PHOTOSYNTHIZE_ENERGY_GAIN; // Dark biome (right)
         }
