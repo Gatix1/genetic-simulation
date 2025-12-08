@@ -7,9 +7,9 @@
 #define GRID_THICKNESS 1
 #define GRID_COLOR BLACK
 
-#define MUTATION_RATE 0.005f // Chance for a single gene to mutate
-#define GENOME_INSERTION_RATE 0.001f // Chance to add a gene
-#define GENOME_DELETION_RATE 0.001f // Chance to remove a gene
+#define MUTATION_RATE 0.01f // Chance for a single gene to mutate
+#define GENOME_INSERTION_RATE 0.01f // Chance to add a gene
+#define GENOME_DELETION_RATE 0.01f // Chance to remove a gene
 
 #define BOTTOM_PANEL_HEIGHT 50
 #define SIDE_PANEL_WIDTH 250

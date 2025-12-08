@@ -16,6 +16,8 @@ public:
     Vector2 getPosition();
     int getEnergy() const;
     Color getColor() const;
+    int getGenomeSize() const;
+    int getMemorySize() const;
     void addEnergy(int amount);
     void setPosition(Vector2 pos);
     bool is_dead = false;

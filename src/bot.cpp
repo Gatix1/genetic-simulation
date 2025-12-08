@@ -407,6 +407,14 @@ void Bot::render(int view_mode) {
     this->render(view_mode, 255); // Call the main render function with full opacity
 }
 
+int Bot::getGenomeSize() const {
+    return this->genome.size();
+}
+
+int Bot::getMemorySize() const {
+    return this->memory.size();
+}
+
 void Bot::render(int view_mode, unsigned char alpha_override) {
     Color render_color = this->color;
 
