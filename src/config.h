@@ -27,6 +27,6 @@
 #define HIGH_PHOTOSYNTHIZE_ENERGY_GAIN 20 // Used in left biome
 #define LOW_PHOTOSYNTHIZE_ENERGY_GAIN 1 // Used in right biome
 
-#define COLOR_MUTATION_AMOUNT 50
+#define COLOR_MUTATION_AMOUNT 20
 
 #define MAXIMUM_BOT_AGE 3000

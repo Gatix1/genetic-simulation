@@ -253,7 +253,7 @@ void Bot::_checkRelative(int relative_index, World& world) {
 
     Bot* target_bot = world.getBotAt(target_pos);
     if (target_bot != nullptr && target_bot != this) {
-        if (_genomeDifference(*target_bot) < 2) {
+        if (_genomeDifference(*target_bot) < 5) {
             _memoryPush(1);
             return;
         }
@@ -484,11 +484,11 @@ void Bot::_processGenome(World &world) {
     }
     // 4 Photosynthize (free energy)
     else if (instruction == 4) {
-        int energy_gain = HIGH_PHOTOSYNTHIZE_ENERGY_GAIN; // Balanced biome (center)
+        int energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN; // Balanced biome (center)
         float bot_x = this->position.x;
 
         if (bot_x < WORLD_WIDTH / 3.0f) {
-            energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN * 1.5; // Sunny biome (left)
+            energy_gain = HIGH_PHOTOSYNTHIZE_ENERGY_GAIN; // Sunny biome (left)
         } else if (bot_x >= 2.0f * WORLD_WIDTH / 3.0f) {
             energy_gain = LOW_PHOTOSYNTHIZE_ENERGY_GAIN; // Dark biome (right)
         }
