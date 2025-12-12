@@ -22,6 +22,9 @@ public:
     Bot* getOrganismRoot() const;
     int getSpeedDivisor() const;
 
+    bool isScanningRelatives() const;
+    const std::vector<Bot*>& getHighlightedRelatives() const;
+
 private:
     // State
     bool is_paused = false;
@@ -29,6 +32,11 @@ private:
     Bot* selected_bot = nullptr;
     Bot* organism_root = nullptr;
     int speed_divisor = 1;
+
+    // Relative scanning state
+    bool is_scanning_relatives = false;
+    std::vector<Bot*> highlighted_relatives;
+    Bot* scan_origin_bot = nullptr;
 
     // Top panel state
     char seed_buffer[128] = "";

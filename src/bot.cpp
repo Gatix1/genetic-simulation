@@ -243,6 +243,10 @@ int Bot::_genomeDifference(const Bot& other) const {
     return differences + (max_size - min_size);
 }
 
+int Bot::genomeDifference(const Bot& other) const {
+    return _genomeDifference(other);
+}
+
 void Bot::_checkRelative(int relative_index, World& world) {
     if ((relative_index < 0) || (relative_index > 7)) {
         return;

@@ -10,10 +10,11 @@ public:
     void spawnInitialBots(int count);
     void addBot(Bot *bot_ptr);
     void removeBot(Bot* bot_ptr);
-    void render(int view_mode, Bot* organism_root);
+    void render(int view_mode, Bot* selected_bot, const std::vector<Bot*>& relatives);
     void process();
     void updateBotPosition(Bot* bot_ptr, Vector2 old_pos);
     Bot* getBotAt(Vector2 position);
+    const std::vector<Bot*>& getBots() const;
     int getBotsSize() const { return this->bots.size(); }
     long long getStepCount() const { return this->step_count; }
     unsigned int getSeed() const { return this->seed; }

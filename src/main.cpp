@@ -47,7 +47,7 @@ int main(void)
             // --- Simulation & UI ---
             rlPushMatrix();
             rlTranslatef(0, (float)TOP_PANEL_HEIGHT, 0);
-            world.render(ui.getViewMode(), ui.getOrganismRoot());
+            world.render(ui.getViewMode(), ui.getOrganismRoot(), ui.getHighlightedRelatives());
             ui.drawWorldOverlay();
             rlPopMatrix();
             

@@ -48,6 +48,10 @@ void World::updateBotPosition(Bot* bot_ptr, Vector2 old_pos) {
     this->grid[(int)bot_ptr->getPosition().x][(int)bot_ptr->getPosition().y] = bot_ptr;
 }
 
+const std::vector<Bot*>& World::getBots() const {
+    return this->bots;
+}
+
 World::~World() {
     for (Bot* bot : bots) {
         delete bot;
@@ -55,7 +59,7 @@ World::~World() {
     // The vector will be cleared automatically when the World object is destroyed.
 }
 
-void World::render(int view_mode, Bot* organism_root) {
+void World::render(int view_mode, Bot* selected_bot, const std::vector<Bot*>& relatives) {
     // --- Draw Biome Backgrounds ---
     // Sunny Biome (Left)
     DrawRectangle(0, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {255, 200, 0, 40});
@@ -64,26 +68,21 @@ void World::render(int view_mode, Bot* organism_root) {
     // Dark Biome (Right)
     DrawRectangle((2 * WORLD_WIDTH / 3) * CELL_SIZE, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {0, 255, 255, 40});
 
-    // Center biome has no overlay, using the default background color.
+    bool highlight_mode = (selected_bot != nullptr);
 
-    if (organism_root != nullptr) {
-        // --- Organism Isolation View ---
-        // Render all bots, but fade out the ones not in the selected organism.
-        for (Bot* bot : this->bots) {
-            bool is_in_organism = (bot == organism_root);
-            if (is_in_organism) {
-                bot->render(view_mode);
-            } else {
-                bot->render(view_mode, int(255.0 * 0.7)); // Render with ~70% transparency (30% opaque)
-            }
-        }
-    } else {
-        // --- Default View ---
-        // Draw all bots
-        for (Bot* bot : this->bots) {
+    for (Bot* bot : this->bots) {
+        bool is_relative = std::find(relatives.begin(), relatives.end(), bot) != relatives.end();
+        bool is_selected = (bot == selected_bot);
+        if (!highlight_mode || is_selected || is_relative) {
             bot->render(view_mode);
+            if (is_relative) {
+                DrawRectangleLinesEx({bot->getPosition().x * CELL_SIZE, bot->getPosition().y * CELL_SIZE, (float)CELL_SIZE, (float)CELL_SIZE}, 2, WHITE);
+            }
+        } else {
+            bot->render(view_mode, (unsigned char)(255.0 * 0.2));
         }
     }
+
     // Draw grid
     for (int i = 0; i < WORLD_WIDTH; i++) {
         DrawLineEx({float(i) * CELL_SIZE, 0},

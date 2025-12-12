@@ -19,6 +19,7 @@ public:
     int getAge() const;
     const std::vector<unsigned int>& getGenome() const;
     const std::stack<unsigned int>& getMemory() const;
+    int genomeDifference(const Bot& other) const;
     unsigned int getPC() const;
     int getGenomeSize() const;
     int getMemorySize() const;

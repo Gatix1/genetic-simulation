@@ -1,6 +1,7 @@
 #include "ui.h"
 #include <string>
 #include <fstream>
+#include <algorithm>
 
 #include "instructions.h"
 UI::UI() {}
@@ -13,7 +14,7 @@ UI::~UI() {
 }
 
 bool UI::isPaused() const {
-    return is_paused;
+    return is_paused || is_scanning_relatives;
 }
 
 int UI::getViewMode() const {
@@ -28,11 +29,19 @@ int UI::getSpeedDivisor() const {
     return speed_divisor;
 }
 
+bool UI::isScanningRelatives() const {
+    return is_scanning_relatives;
+}
+
+const std::vector<Bot*>& UI::getHighlightedRelatives() const {
+    return highlighted_relatives;
+}
+
 void UI::handleInput(World& world) {
     // Keyboard input
     // We check WantCaptureKeyboard to prevent triggering hotkeys while typing in InputText or navigating menus/modals.
     if (!ImGui::GetIO().WantCaptureKeyboard) {
-        if (IsKeyPressed(KEY_SPACE)) is_paused = !is_paused;
+        if (IsKeyPressed(KEY_SPACE) && !is_scanning_relatives) is_paused = !is_paused;
         if (IsKeyPressed(KEY_ONE)) current_view_mode = 1;
         if (IsKeyPressed(KEY_TWO)) current_view_mode = 2;
     }
@@ -42,6 +51,9 @@ void UI::handleInput(World& world) {
         selected_bot = nullptr;
         organism_root = nullptr;
         selected_loaded_bot = nullptr;
+        is_scanning_relatives = false;
+        highlighted_relatives.clear();
+        scan_origin_bot = nullptr;
     }
 
     // ImGui::GetIO().WantCaptureMouse is true if the mouse is hovering over an ImGui window.
@@ -65,6 +77,11 @@ void UI::handleInput(World& world) {
             } else {
                 selected_bot = world.getBotAt(target_pos);
                 organism_root = selected_bot;
+                if (scan_origin_bot != selected_bot) {
+                    is_scanning_relatives = false;
+                    highlighted_relatives.clear();
+                    scan_origin_bot = nullptr;
+                }
             }
         }
     }
@@ -73,6 +90,9 @@ void UI::handleInput(World& world) {
     if (organism_root != nullptr && organism_root->is_dead) {
         selected_bot = nullptr;
         organism_root = nullptr;
+        is_scanning_relatives = false;
+        highlighted_relatives.clear();
+        scan_origin_bot = nullptr;
     }
 }
 
@@ -291,6 +311,30 @@ void UI::drawPanels(World& world) {
         else ImGui::TextColored(ImVec4(0, 1, 1, 1), "LOADED BOT (Placement Mode)");
         ImGui::Separator();
 
+        if (selected_bot && !inspector_bot->isOrganic) {
+            if (is_scanning_relatives) {
+                if (ImGui::Button("Hide Relatives")) {
+                    is_scanning_relatives = false;
+                    highlighted_relatives.clear();
+                    scan_origin_bot = nullptr;
+                }
+            } else {
+                if (ImGui::Button("Find Relatives")) {
+                    is_scanning_relatives = true;
+                    scan_origin_bot = selected_bot;
+                    highlighted_relatives.clear();
+                    const auto& all_bots = world.getBots();
+                    for (Bot* other_bot : all_bots) {
+                        if (other_bot != scan_origin_bot && !other_bot->is_dead && !other_bot->isOrganic) {
+                            if (scan_origin_bot->genomeDifference(*other_bot) < 5) {
+                                highlighted_relatives.push_back(other_bot);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (inspector_bot->isOrganic) {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Status: Organic Matter");
         } else {
@@ -372,9 +416,11 @@ void UI::drawPanels(World& world) {
 
     ImGui::SameLine(0.0f, 60.0f);
     // ImGui::Button returns true only on the frame it is clicked.
-    if (ImGui::Button(is_paused ? "Resume (Space)" : "Pause (Space)")) {
+    ImGui::BeginDisabled(is_scanning_relatives);
+    if (ImGui::Button((is_paused || is_scanning_relatives) ? "Resume (Space)" : "Pause (Space)")) {
         is_paused = !is_paused;
     }
+    ImGui::EndDisabled();
 
     // Radio buttons for switching view modes. They update 'current_view_mode' directly.
     ImGui::SameLine(0.0f, 60.0f);
