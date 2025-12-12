@@ -1,7 +1,15 @@
 #include "ui.h"
 #include <string>
+#include <fstream>
 
 UI::UI() {}
+
+UI::~UI() {
+    for (auto& bot_info : loaded_bots) {
+        delete bot_info.bot;
+    }
+    loaded_bots.clear();
+}
 
 bool UI::isPaused() const {
     return is_paused;
@@ -33,6 +41,7 @@ void UI::handleInput(World& world) {
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
         selected_bot = nullptr;
         organism_root = nullptr;
+        selected_loaded_bot = nullptr;
     }
 
     // ImGui::GetIO().WantCaptureMouse is true if the mouse is hovering over an ImGui window.
@@ -45,9 +54,18 @@ void UI::handleInput(World& world) {
         if (mouse_pos.x >= 0 && mouse_pos.x < WORLD_WIDTH * CELL_SIZE && mouse_pos.y >= 0 && mouse_pos.y < WORLD_HEIGHT * CELL_SIZE) {
             int grid_x = mouse_pos.x / CELL_SIZE;
             int grid_y = mouse_pos.y / CELL_SIZE;
-            selected_bot = world.getBotAt({(float)grid_x, (float)grid_y});
+            Vector2 target_pos = {(float)grid_x, (float)grid_y};
 
-            organism_root = selected_bot;
+            if (selected_loaded_bot != nullptr) {
+                if (world.getBotAt(target_pos) == nullptr) {
+                    Bot* new_bot = new Bot(*selected_loaded_bot);
+                    new_bot->setPosition(target_pos);
+                    world.addBot(new_bot);
+                }
+            } else {
+                selected_bot = world.getBotAt(target_pos);
+                organism_root = selected_bot;
+            }
         }
     }
 
@@ -87,17 +105,40 @@ void UI::drawPanels(World& world) {
             }
             ImGui::EndMenu();
         }
+        ImGui::Dummy(ImVec2(10.0f, 0.0f));
         if (ImGui::BeginMenu("Tools")) {
             if (ImGui::MenuItem("Spawn Bots")) {
                 show_spawn_bots_modal = true;
             }
             ImGui::EndMenu();
         }
+        ImGui::Dummy(ImVec2(10.0f, 0.0f));
         if (ImGui::BeginMenu("Speed")) {
             if (ImGui::MenuItem("Original", NULL, speed_divisor == 1)) speed_divisor = 1;
             if (ImGui::MenuItem("1/2", NULL, speed_divisor == 2)) speed_divisor = 2;
             if (ImGui::MenuItem("1/4", NULL, speed_divisor == 4)) speed_divisor = 4;
             if (ImGui::MenuItem("1/12", NULL, speed_divisor == 12)) speed_divisor = 12;
+            ImGui::EndMenu();
+        }
+        ImGui::Dummy(ImVec2(10.0f, 0.0f));
+        if (ImGui::BeginMenu("Bot")) {
+            if (ImGui::MenuItem("Save Bot", NULL, false, selected_bot != nullptr)) {
+                show_save_bot_modal = true;
+            }
+            if (ImGui::MenuItem("Load Bot")) {
+                show_load_bot_modal = true;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::Dummy(ImVec2(10.0f, 0.0f));
+        if (ImGui::BeginMenu("Loaded Bots")) {
+            for (const auto& bot_info : loaded_bots) {
+                if (ImGui::MenuItem(bot_info.filename.c_str(), NULL, selected_loaded_bot == bot_info.bot)) {
+                    selected_loaded_bot = bot_info.bot;
+                    selected_bot = nullptr;
+                    organism_root = nullptr;
+                }
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -190,34 +231,80 @@ void UI::drawPanels(World& world) {
         ImGui::EndPopup();
     }
 
+    // 5. Save Bot Modal
+    if (show_save_bot_modal) {
+        ImGui::OpenPopup("Save Bot");
+        show_save_bot_modal = false;
+    }
+    if (ImGui::BeginPopupModal("Save Bot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::InputText("Filename", bot_filename_buffer, IM_ARRAYSIZE(bot_filename_buffer));
+        if (ImGui::Button("Save", ImVec2(0, 0))) {
+            if (selected_bot) {
+                std::ofstream out(bot_filename_buffer, std::ios::binary);
+                if (out.is_open()) {
+                    selected_bot->serialize(out);
+                    out.close();
+                }
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    // 6. Load Bot Modal
+    if (show_load_bot_modal) {
+        ImGui::OpenPopup("Load Bot");
+        show_load_bot_modal = false;
+    }
+    if (ImGui::BeginPopupModal("Load Bot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::InputText("Filename", bot_filename_buffer, IM_ARRAYSIZE(bot_filename_buffer));
+        if (ImGui::Button("Load", ImVec2(0, 0))) {
+            std::ifstream in(bot_filename_buffer, std::ios::binary);
+            if (in.is_open()) {
+                Bot* bot = new Bot();
+                bot->deserialize(in);
+                loaded_bots.push_back({std::string(bot_filename_buffer), bot});
+                in.close();
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
     // Side Panel (ImGui)
     ImGui::SetNextWindowPos(ImVec2(WORLD_WIDTH * CELL_SIZE, TOP_PANEL_HEIGHT));
     ImGui::SetNextWindowSize(ImVec2(SIDE_PANEL_WIDTH, WORLD_HEIGHT * CELL_SIZE));
     ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     
     // Dynamic content: The UI changes immediately based on whether a bot is selected.
-    if (selected_bot != nullptr) {
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "SELECTED BOT");
+    Bot* inspector_bot = selected_bot ? selected_bot : selected_loaded_bot;
+    if (inspector_bot != nullptr) {
+        if (selected_bot) ImGui::TextColored(ImVec4(1, 1, 0, 1), "SELECTED BOT");
+        else ImGui::TextColored(ImVec4(0, 1, 1, 1), "LOADED BOT (Placement Mode)");
         ImGui::Separator();
 
-        if (selected_bot->isOrganic) {
+        if (inspector_bot->isOrganic) {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Status: Organic Matter");
         } else {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Alive");
         }
         
-        ImGui::Text("Energy: %d", selected_bot->getEnergy());
+        ImGui::Text("Energy: %d", inspector_bot->getEnergy());
         
-        Color c = selected_bot->getColor();
+        Color c = inspector_bot->getColor();
         float color[4] = { c.r/255.0f, c.g/255.0f, c.b/255.0f, 1.0f };
         ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoPicker);
 
-        ImGui::Text("Age: %d", selected_bot->getAge());
+        ImGui::Text("Age: %d", inspector_bot->getAge());
 
         ImGui::Separator();
         ImGui::Text("Memory Stack");
         if (ImGui::BeginChild("MemoryStack", ImVec2(0, 100), true)) {
-            const std::stack<unsigned int> memory = selected_bot->getMemory();
+            const std::stack<unsigned int> memory = inspector_bot->getMemory();
             // Display from top to bottom
             for (int i = 0; i < (int)memory.size(); ++i) {
                 ImGui::Text("%02d: %u", (int)memory.size() - 1 - i, memory.top());
@@ -228,8 +315,8 @@ void UI::drawPanels(World& world) {
         ImGui::Separator();
         ImGui::Text("Genome");
         if (ImGui::BeginChild("GenomeView", ImVec2(0, 150), true)) {
-            const std::vector<unsigned int>& genome = selected_bot->getGenome();
-            unsigned int pc = selected_bot->getPC();
+            const std::vector<unsigned int>& genome = inspector_bot->getGenome();
+            unsigned int pc = inspector_bot->getPC();
             for (size_t i = 0; i < genome.size(); ++i) {
                 unsigned int val = genome[i];
                 const char* instr = "JUMP";

@@ -11,6 +11,7 @@
 class UI {
 public:
     UI();
+    ~UI();
     void handleInput(World& world);
     void drawWorldOverlay() const;
     void drawPanels(const World& world);
@@ -40,4 +41,15 @@ private:
     bool show_save_world_modal = false;
     bool show_load_world_modal = false;
     char save_filename_buffer[128] = "world.save";
+
+    // Bot management state
+    struct LoadedBotInfo {
+        std::string filename;
+        Bot* bot;
+    };
+    std::vector<LoadedBotInfo> loaded_bots;
+    Bot* selected_loaded_bot = nullptr;
+    bool show_save_bot_modal = false;
+    bool show_load_bot_modal = false;
+    char bot_filename_buffer[128] = "bot.save";
 };
