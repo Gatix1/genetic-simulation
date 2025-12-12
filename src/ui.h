@@ -1,13 +1,20 @@
 #pragma once
 #include "raylib.h"
 #include "world.h"
+#include "imgui.h"
 #include "config.h"
 
+// The UI class handles the overlay interface using Dear ImGui.
+// It bridges the gap between the simulation state (World/Bot) and the user.
+// Note: Input handling here is for selecting entities in the world; 
+// ImGui handles its own input (buttons, sliders) internally within the draw() method.
 class UI {
 public:
     UI();
     void handleInput(World& world);
-    void draw(const World& world);
+    void drawWorldOverlay() const;
+    void drawPanels(const World& world);
+    void drawPanels(World& world);
 
     bool isPaused() const;
     int getViewMode() const;
@@ -20,11 +27,11 @@ private:
     Bot* selected_bot = nullptr;
     Bot* organism_root = nullptr;
 
-    // UI Element Rectangles
-    Rectangle button1_rect;
-    Rectangle button2_rect;
-    Rectangle button3_rect;
+    // Top panel state
+    char seed_buffer[128] = "seed";
+    int bots_to_spawn_count = 100;
 
-    void _drawSidePanel() const;
-    void _drawBottomPanel(const World& world) const;
+    // Modal state
+    bool show_new_world_modal = false;
+    bool show_spawn_bots_modal = false;
 };

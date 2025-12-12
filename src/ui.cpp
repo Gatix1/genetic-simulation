@@ -1,12 +1,7 @@
 #include "ui.h"
 #include <string>
 
-UI::UI() {
-    const int screenHeight = WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
-    button1_rect = { (float)WORLD_WIDTH * CELL_SIZE - 150, (float)screenHeight - 35, 30, 30 };
-    button2_rect = { (float)WORLD_WIDTH * CELL_SIZE - 110, (float)screenHeight - 35, 30, 30 };
-    button3_rect = { (float)WORLD_WIDTH * CELL_SIZE - 70, (float)screenHeight - 35, 30, 30 };
-}
+UI::UI() {}
 
 bool UI::isPaused() const {
     return is_paused;
@@ -22,12 +17,13 @@ Bot* UI::getOrganismRoot() const {
 
 void UI::handleInput(World& world) {
     // Keyboard input
-    if (IsKeyPressed(KEY_SPACE)) {
-        is_paused = !is_paused;
+    // We check WantCaptureKeyboard to prevent triggering hotkeys while typing in InputText or navigating menus/modals.
+    if (!ImGui::GetIO().WantCaptureKeyboard) {
+        if (IsKeyPressed(KEY_SPACE)) is_paused = !is_paused;
+        if (IsKeyPressed(KEY_ONE)) current_view_mode = 1;
+        if (IsKeyPressed(KEY_TWO)) current_view_mode = 2;
+        if (IsKeyPressed(KEY_THREE)) current_view_mode = 3;
     }
-    if (IsKeyPressed(KEY_ONE)) current_view_mode = 1;
-    if (IsKeyPressed(KEY_TWO)) current_view_mode = 2;
-    if (IsKeyPressed(KEY_THREE)) current_view_mode = 3;
 
     // Mouse input
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
@@ -35,16 +31,14 @@ void UI::handleInput(World& world) {
         organism_root = nullptr;
     }
 
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    // ImGui::GetIO().WantCaptureMouse is true if the mouse is hovering over an ImGui window.
+    // We only want to process world clicks (selecting bots) if the mouse is NOT interacting with the UI.
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !ImGui::GetIO().WantCaptureMouse) {
         Vector2 mouse_pos = GetMousePosition();
-        if (CheckCollisionPointRec(mouse_pos, button1_rect)) {
-            current_view_mode = 1;
-        } else if (CheckCollisionPointRec(mouse_pos, button2_rect)) {
-            current_view_mode = 2;
-        } else if (CheckCollisionPointRec(mouse_pos, button3_rect)) {
-            current_view_mode = 3;
-        } else if (mouse_pos.x < WORLD_WIDTH * CELL_SIZE && mouse_pos.y < WORLD_HEIGHT * CELL_SIZE) {
-            // Click was in the world, not on a UI button
+        mouse_pos.y -= TOP_PANEL_HEIGHT; // Adjust for top panel
+        
+        // Check if click is within the world bounds
+        if (mouse_pos.x >= 0 && mouse_pos.x < WORLD_WIDTH * CELL_SIZE && mouse_pos.y >= 0 && mouse_pos.y < WORLD_HEIGHT * CELL_SIZE) {
             int grid_x = mouse_pos.x / CELL_SIZE;
             int grid_y = mouse_pos.y / CELL_SIZE;
             selected_bot = world.getBotAt({(float)grid_x, (float)grid_y});
@@ -60,55 +54,128 @@ void UI::handleInput(World& world) {
     }
 }
 
-void UI::draw(const World& world) {
-    if (is_paused) {
-        DrawText("PAUSED", 10, 10, 20, RED);
-    }
-
-    // Draw selection border if a bot is selected
+void UI::drawWorldOverlay() const {
+    // World Overlay (Raylib)
+    // We draw the selection box directly in the world using Raylib functions because
+    // it needs to be aligned with the grid, not the UI layer.
     if (selected_bot != nullptr) {
         Vector2 pos = selected_bot->getPosition();
         DrawRectangleLinesEx({pos.x * CELL_SIZE, pos.y * CELL_SIZE, (float)CELL_SIZE, (float)CELL_SIZE}, 3, BLACK);
     }
-
-    _drawBottomPanel(world);
-    _drawSidePanel();
 }
 
-void UI::_drawBottomPanel(const World& world) const {
-    DrawRectangle(0, WORLD_HEIGHT * CELL_SIZE, WORLD_WIDTH * CELL_SIZE, BOTTOM_PANEL_HEIGHT, BLACK);
-    std::string bot_count_text = "Bots: " + std::to_string(world.getBotsSize());
-    std::string step_count_text = "Step: " + std::to_string(world.getStepCount());
-    std::string fps_text = "FPS: " + std::to_string(GetFPS());
-    DrawText(bot_count_text.c_str(), 10, WORLD_HEIGHT * CELL_SIZE + 15, 20, RAYWHITE);
-    DrawText(step_count_text.c_str(), 200, WORLD_HEIGHT * CELL_SIZE + 15, 20, RAYWHITE);
-    DrawText(fps_text.c_str(), 450, WORLD_HEIGHT * CELL_SIZE + 15, 20, RAYWHITE);
+void UI::drawPanels(World& world) {
+    // --- Main Menu Bar ---
+    // Make menu bar transparent and borderless
+    if (ImGui::BeginMainMenuBar()) {
+        ImGui::Dummy(ImVec2(10.0f, 0.0f)); // Add left margin
+        ImGui::SameLine();
 
-    // View Mode UI
-    DrawText("View Mode:", WORLD_WIDTH * CELL_SIZE - 280, WORLD_HEIGHT * CELL_SIZE + 15, 20, RAYWHITE);
-    DrawRectangleRec(button1_rect, current_view_mode == 1 ? DARKBLUE : LIGHTGRAY); DrawText("1", button1_rect.x + 10, button1_rect.y + 5, 20, BLACK);
-    DrawRectangleRec(button2_rect, current_view_mode == 2 ? DARKBLUE : LIGHTGRAY); DrawText("2", button2_rect.x + 10, button2_rect.y + 5, 20, BLACK);
-    DrawRectangleRec(button3_rect, current_view_mode == 3 ? DARKBLUE : LIGHTGRAY); DrawText("3", button3_rect.x + 10, button3_rect.y + 5, 20, BLACK);
-}
-
-void UI::_drawSidePanel() const {
-    const int screenHeight = WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
-    DrawRectangle(WORLD_WIDTH * CELL_SIZE, 0, SIDE_PANEL_WIDTH, screenHeight, BLACK);
-    if (selected_bot != nullptr) {
-        DrawText("SELECTED BOT", WORLD_WIDTH * CELL_SIZE + 10, 10, 20, YELLOW);
-
-        // Determine status
-        std::string status_text = "Status: ";
-        Color status_color = RED;
-        if (selected_bot->isOrganic) {
-            status_text += "Organic";
-            status_color = GRAY;
-        } else {
-            status_text += "Alive";
-            status_color = GREEN;
+        if (ImGui::BeginMenu("World")) {
+            if (ImGui::MenuItem("New World")) {
+                show_new_world_modal = true;
+            }
+            if (ImGui::MenuItem("Save")) {
+                // Implementation to come
+            }
+            if (ImGui::MenuItem("Load")) {
+                // Implementation to come
+            }
+            ImGui::EndMenu();
         }
-        DrawText(status_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 40, 20, status_color);
-        std::string energy_text = "Energy: " + std::to_string(selected_bot->getEnergy());
-        DrawText(energy_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 70, 20, RAYWHITE);
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::MenuItem("Spawn Bots")) {
+                show_spawn_bots_modal = true;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
     }
+
+    // --- Modals (Floating Windows) ---
+    
+    // 1. New World Modal
+    if (show_new_world_modal) {
+        ImGui::OpenPopup("New World Options");
+        show_new_world_modal = false;
+    }
+    if (ImGui::BeginPopupModal("New World Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Enter a seed for the new world generation:");
+        ImGui::InputText("Seed", seed_buffer, IM_ARRAYSIZE(seed_buffer));
+        ImGui::Separator();
+
+        if (ImGui::Button("New World", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); /* Logic to come */ }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    // 2. Spawn Bots Modal
+    if (show_spawn_bots_modal) {
+        ImGui::OpenPopup("Spawn Bots Options");
+        show_spawn_bots_modal = false;
+    }
+    if (ImGui::BeginPopupModal("Spawn Bots Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::InputInt("Amount", &bots_to_spawn_count);
+        if (ImGui::Button("Spawn", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); /* Logic to come */ }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    // Side Panel (ImGui)
+    ImGui::SetNextWindowPos(ImVec2(WORLD_WIDTH * CELL_SIZE, TOP_PANEL_HEIGHT));
+    ImGui::SetNextWindowSize(ImVec2(SIDE_PANEL_WIDTH, WORLD_HEIGHT * CELL_SIZE));
+    ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    
+    // Dynamic content: The UI changes immediately based on whether a bot is selected.
+    if (selected_bot != nullptr) {
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "SELECTED BOT");
+        ImGui::Separator();
+
+        if (selected_bot->isOrganic) {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Status: Organic Matter");
+        } else {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Alive");
+        }
+        
+        ImGui::Text("Energy: %d", selected_bot->getEnergy());
+        
+        Color c = selected_bot->getColor();
+        float color[4] = { c.r/255.0f, c.g/255.0f, c.b/255.0f, 1.0f };
+        ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoPicker);
+    } else {
+        ImGui::TextWrapped("Click on a bot in the grid to inspect it.");
+    }
+    ImGui::End();
+
+    // Bottom Panel (ImGui)
+    ImGui::SetNextWindowPos(ImVec2(0, TOP_PANEL_HEIGHT + WORLD_HEIGHT * CELL_SIZE));
+    ImGui::SetNextWindowSize(ImVec2(WORLD_WIDTH * CELL_SIZE + SIDE_PANEL_WIDTH, BOTTOM_PANEL_HEIGHT));
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+    
+    // Stats
+    ImGui::Text("Bots: %d", world.getBotsSize());
+    ImGui::SameLine(0.0f, 30.0f);
+    ImGui::Text("Step: %lld", world.getStepCount());
+    ImGui::SameLine(0.0f, 30.0f);
+    ImGui::Text("FPS: %d", GetFPS());
+
+    ImGui::SameLine(0.0f, 60.0f);
+    // ImGui::Button returns true only on the frame it is clicked.
+    if (ImGui::Button(is_paused ? "Resume (Space)" : "Pause (Space)")) {
+        is_paused = !is_paused;
+    }
+
+    // Radio buttons for switching view modes. They update 'current_view_mode' directly.
+    ImGui::SameLine(0.0f, 60.0f);
+    ImGui::Text("View:");
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Nutrition (1)", current_view_mode == 1)) current_view_mode = 1;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Energy (2)", current_view_mode == 2)) current_view_mode = 2;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Species (3)", current_view_mode == 3)) current_view_mode = 3;
+
+    ImGui::End();
 }

@@ -1,4 +1,7 @@
 #include "raylib.h"
+#include "rlImGui.h"
+#include "rlgl.h"
+#include "rlgl.h"
 #include "world.h"
 #include "config.h"
 #include "ui.h"
@@ -8,8 +11,8 @@
 
 int main(void)
 {
-    const int screenWidth = WORLD_WIDTH * CELL_SIZE + SIDE_PANEL_WIDTH; 
-    const int screenHeight = WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
+    const int screenWidth = WORLD_WIDTH * CELL_SIZE + SIDE_PANEL_WIDTH;
+    const int screenHeight = TOP_PANEL_HEIGHT + WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
 
     SetRandomSeed((unsigned int)time(NULL));
 
@@ -17,9 +20,12 @@ int main(void)
     world.spawnInitialBots(1000);
 
     InitWindow(screenWidth, screenHeight, "Simulation");
+    rlImGuiSetup(true); // Initialize ImGui with dark mode
+
+    // Increase the global UI scale for better readability.
+    ImGui::GetIO().FontGlobalScale = 2.0f;
 
     SetTargetFPS(300);
-
     UI ui;
 
     // Main loop
@@ -36,14 +42,21 @@ int main(void)
         // --- Drawing ---
         BeginDrawing();
             ClearBackground(BG_COLOR);
-
             // --- Simulation & UI ---
+            rlPushMatrix();
+            rlTranslatef(0, (float)TOP_PANEL_HEIGHT, 0);
             world.render(ui.getViewMode(), ui.getOrganismRoot());
-            ui.draw(world);
+            ui.drawWorldOverlay();
+            rlPopMatrix();
+            
+            rlImGuiBegin();
+            ui.drawPanels(world);
+            rlImGuiEnd();
 
         EndDrawing();
     }
 
+    rlImGuiShutdown();
     CloseWindow(); 
 
     return 0;
