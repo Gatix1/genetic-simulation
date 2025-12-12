@@ -58,10 +58,11 @@ World::~World() {
 void World::render(int view_mode, Bot* organism_root) {
     // --- Draw Biome Backgrounds ---
     // Sunny Biome (Left)
-    DrawRectangle(0, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {255, 255, 0, 40});
-
+    DrawRectangle(0, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {255, 200, 0, 40});
+    // Normal Biome (Center)
+    DrawRectangle((WORLD_WIDTH / 3) * CELL_SIZE, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {0, 255, 100, 40});
     // Dark Biome (Right)
-    DrawRectangle((2 * WORLD_WIDTH / 3) * CELL_SIZE, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {0, 0, 0, 40});
+    DrawRectangle((2 * WORLD_WIDTH / 3) * CELL_SIZE, 0, (WORLD_WIDTH / 3) * CELL_SIZE, WORLD_HEIGHT * CELL_SIZE, {0, 255, 255, 40});
 
     // Center biome has no overlay, using the default background color.
 

@@ -3,7 +3,7 @@
 #define WORLD_HEIGHT 100
 
 #define CELL_SIZE 16
-#define BG_COLOR RAYWHITE
+#define BG_COLOR BLACK
 #define GRID_THICKNESS 1
 #define GRID_COLOR BLACK
 
@@ -17,7 +17,7 @@
 #define SIDE_PANEL_WIDTH 400
 
 #define INITIAL_GENOME_SIZE 64
-#define MIN_GENOME_SIZE 4
+#define MIN_GENOME_SIZE 1
 #define MAX_GENOME_SIZE 2048
 #define MEMORY_SIZE 64
 
@@ -27,8 +27,8 @@
 
 #define PHOTOSYNTHIZE_ENERGY_GAIN 10 // Used in middle biome
 #define HIGH_PHOTOSYNTHIZE_ENERGY_GAIN 20 // Used in left biome
-#define LOW_PHOTOSYNTHIZE_ENERGY_GAIN 1 // Used in right biome
+#define LOW_PHOTOSYNTHIZE_ENERGY_GAIN 4 // Used in right biome
 
-#define COLOR_MUTATION_AMOUNT 20
+#define COLOR_MUTATION_AMOUNT 10
 
 #define MAXIMUM_BOT_AGE 3000

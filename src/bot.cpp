@@ -429,7 +429,7 @@ void Bot::render(int view_mode, unsigned char alpha_override) {
 
     if (this->isOrganic) {
         float margin = CELL_SIZE / 4.0f;
-        DrawRectangle(this->position.x * CELL_SIZE + margin, this->position.y * CELL_SIZE + margin, CELL_SIZE - margin * 2, CELL_SIZE - margin * 2, {DARKGRAY.r, DARKGRAY.g, DARKGRAY.b, alpha_override});
+        DrawRectangle(this->position.x * CELL_SIZE + margin, this->position.y * CELL_SIZE + margin, CELL_SIZE - margin * 2, CELL_SIZE - margin * 2, {GRAY.r, GRAY.g, GRAY.b, alpha_override});
         return;
     }
 
@@ -448,22 +448,15 @@ void Bot::render(int view_mode, unsigned char alpha_override) {
                     render_color = { 255, (unsigned char)(255 * (1.0f - ratio)), 0, 255 }; // Yellow to Red
                 }
             }
+            render_color.a = (unsigned char)((float)this->energy / (float)MAX_ENERGY * alpha_override);
             break;
         }
-        case 2: { // Energy Level
-            float energy_ratio = std::clamp((float)this->energy / (float)INITIAL_ENERGY, 0.0f, 1.0f);
-            // Simple gradient from Red to Green
-            render_color.r = 255;
-            render_color.g = (unsigned char)(255 * energy_ratio); // Green component increases with energy
-            render_color.b = 0;
-            break;
-        }
-        case 3: // Species Color (default)
+        case 2: // Species Color (default)
             // render_color is already this->color
+            render_color.a = (unsigned char)((float)this->energy / (float)MAX_ENERGY * alpha_override);
             break;
     }
 
-    render_color.a = alpha_override;
     DrawRectangle(this->position.x * CELL_SIZE, this->position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE, render_color);
 }
 

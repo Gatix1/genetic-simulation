@@ -35,7 +35,6 @@ void UI::handleInput(World& world) {
         if (IsKeyPressed(KEY_SPACE)) is_paused = !is_paused;
         if (IsKeyPressed(KEY_ONE)) current_view_mode = 1;
         if (IsKeyPressed(KEY_TWO)) current_view_mode = 2;
-        if (IsKeyPressed(KEY_THREE)) current_view_mode = 3;
     }
 
     // Mouse input
@@ -110,6 +109,10 @@ void UI::drawPanels(World& world) {
         if (ImGui::BeginMenu("Tools")) {
             if (ImGui::MenuItem("Spawn Bots")) {
                 show_spawn_bots_modal = true;
+            }
+            if (ImGui::MenuItem("Copy Seed")) {
+                std::string seed_str = std::to_string(world.getSeed());
+                ImGui::SetClipboardText(seed_str.c_str());
             }
             ImGui::EndMenu();
         }
@@ -379,9 +382,7 @@ void UI::drawPanels(World& world) {
     ImGui::SameLine();
     if (ImGui::RadioButton("Nutrition (1)", current_view_mode == 1)) current_view_mode = 1;
     ImGui::SameLine();
-    if (ImGui::RadioButton("Energy (2)", current_view_mode == 2)) current_view_mode = 2;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Species (3)", current_view_mode == 3)) current_view_mode = 3;
+    if (ImGui::RadioButton("Species (2)", current_view_mode == 2)) current_view_mode = 2;
 
     ImGui::End();
 }

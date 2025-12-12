@@ -25,7 +25,7 @@ public:
 private:
     // State
     bool is_paused = false;
-    int current_view_mode = 3; // 1: Nutrition, 2: Energy, 3: Species Color
+    int current_view_mode = 2; // 1: Nutrition, 2: Species Color
     Bot* selected_bot = nullptr;
     Bot* organism_root = nullptr;
     int speed_divisor = 1;
