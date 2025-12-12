@@ -76,10 +76,10 @@ void UI::drawPanels(World& world) {
                 show_new_world_modal = true;
             }
             if (ImGui::MenuItem("Save")) {
-                // Implementation to come
+                show_save_world_modal = true;
             }
             if (ImGui::MenuItem("Load")) {
-                // Implementation to come
+                show_load_world_modal = true;
             }
             ImGui::EndMenu();
         }
@@ -100,11 +100,29 @@ void UI::drawPanels(World& world) {
         show_new_world_modal = false;
     }
     if (ImGui::BeginPopupModal("New World Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Enter a seed for the new world generation:");
+        ImGui::Text("Enter a seed (text or number). Leave empty for random.");
         ImGui::InputText("Seed", seed_buffer, IM_ARRAYSIZE(seed_buffer));
+        ImGui::InputInt("Initial Bots", &initial_bots_count);
         ImGui::Separator();
 
-        if (ImGui::Button("New World", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); /* Logic to come */ }
+        if (ImGui::Button("Create", ImVec2(0, 0))) {
+            unsigned int final_seed;
+            if (strlen(seed_buffer) == 0) {
+                final_seed = (unsigned int)time(NULL);
+                snprintf(seed_buffer, sizeof(seed_buffer), "%u", final_seed);
+            } else {
+                char* p_end;
+                unsigned long long parsed_seed = strtoull(seed_buffer, &p_end, 10);
+                if (*p_end == '\0' && p_end != seed_buffer) {
+                    final_seed = (unsigned int)parsed_seed;
+                } else {
+                    final_seed = 0;
+                    for (const char* p = seed_buffer; *p; ++p) final_seed = 31 * final_seed + *p;
+                }
+            }
+            world.newWorld(final_seed, initial_bots_count);
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
         ImGui::EndPopup();
@@ -117,7 +135,45 @@ void UI::drawPanels(World& world) {
     }
     if (ImGui::BeginPopupModal("Spawn Bots Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::InputInt("Amount", &bots_to_spawn_count);
-        if (ImGui::Button("Spawn", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); /* Logic to come */ }
+        if (ImGui::Button("Spawn", ImVec2(0, 0))) {
+            world.spawnInitialBots(bots_to_spawn_count);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    // 3. Save World Modal
+    if (show_save_world_modal) {
+        ImGui::OpenPopup("Save World");
+        show_save_world_modal = false;
+    }
+    if (ImGui::BeginPopupModal("Save World", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::InputText("Filename", save_filename_buffer, IM_ARRAYSIZE(save_filename_buffer));
+        if (ImGui::Button("Save", ImVec2(0, 0))) { 
+            world.saveWorld(save_filename_buffer);
+            ImGui::CloseCurrentPopup(); 
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    // 4. Load World Modal
+    if (show_load_world_modal) {
+        ImGui::OpenPopup("Load World");
+        show_load_world_modal = false;
+    }
+    if (ImGui::BeginPopupModal("Load World", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::InputText("Filename", save_filename_buffer, IM_ARRAYSIZE(save_filename_buffer));
+        if (ImGui::Button("Load", ImVec2(0, 0))) { 
+            world.loadWorld(save_filename_buffer);
+            selected_bot = nullptr;
+            organism_root = nullptr;
+            snprintf(seed_buffer, sizeof(seed_buffer), "%u", world.getSeed());
+            ImGui::CloseCurrentPopup(); 
+        }
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(0, 0))) { ImGui::CloseCurrentPopup(); }
         ImGui::EndPopup();

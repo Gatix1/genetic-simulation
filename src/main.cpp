@@ -14,10 +14,8 @@ int main(void)
     const int screenWidth = WORLD_WIDTH * CELL_SIZE + SIDE_PANEL_WIDTH;
     const int screenHeight = TOP_PANEL_HEIGHT + WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
 
-    SetRandomSeed((unsigned int)time(NULL));
-
     World world = World();
-    world.spawnInitialBots(1000);
+    world.newWorld((unsigned int)time(NULL), 1000);
 
     InitWindow(screenWidth, screenHeight, "Simulation");
     rlImGuiSetup(true); // Initialize ImGui with dark mode

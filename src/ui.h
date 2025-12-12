@@ -28,10 +28,14 @@ private:
     Bot* organism_root = nullptr;
 
     // Top panel state
-    char seed_buffer[128] = "seed";
+    char seed_buffer[128] = "";
     int bots_to_spawn_count = 100;
+    int initial_bots_count = 1000;
 
     // Modal state
     bool show_new_world_modal = false;
     bool show_spawn_bots_modal = false;
+    bool show_save_world_modal = false;
+    bool show_load_world_modal = false;
+    char save_filename_buffer[128] = "world.save";
 };

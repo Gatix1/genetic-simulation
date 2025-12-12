@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <config.h>
+#include <fstream>
 #pragma once
 
 class World; // Forward declaration
@@ -17,6 +18,8 @@ public:
     Color getColor() const;
     void addEnergy(int amount);
     void setPosition(Vector2 pos);
+    void serialize(std::ofstream& out);
+    void deserialize(std::ifstream& in);
     bool is_dead = false;
     bool isOrganic = false;
 private:

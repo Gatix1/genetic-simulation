@@ -549,3 +549,40 @@ void Bot::die(World& world) {
     this->isOrganic = true;
     // The corpse retains the energy the bot had at the moment of death.
 }
+
+void Bot::serialize(std::ofstream& out) {
+    out.write(reinterpret_cast<char*>(&position), sizeof(position));
+    out.write(reinterpret_cast<char*>(&energy), sizeof(energy));
+    out.write(reinterpret_cast<char*>(&age), sizeof(age));
+    
+    size_t genome_size = genome.size();
+    out.write(reinterpret_cast<char*>(&genome_size), sizeof(genome_size));
+    out.write(reinterpret_cast<char*>(genome.data()), genome_size * sizeof(unsigned int));
+
+    out.write(reinterpret_cast<char*>(&pc), sizeof(pc));
+    out.write(reinterpret_cast<char*>(&color), sizeof(color));
+    out.write(reinterpret_cast<char*>(&direction), sizeof(direction));
+    out.write(reinterpret_cast<char*>(&is_dead), sizeof(is_dead));
+    out.write(reinterpret_cast<char*>(&isOrganic), sizeof(isOrganic));
+    out.write(reinterpret_cast<char*>(&nutrition_balance), sizeof(nutrition_balance));
+    out.write(reinterpret_cast<char*>(&scavenge_points), sizeof(scavenge_points));
+}
+
+void Bot::deserialize(std::ifstream& in) {
+    in.read(reinterpret_cast<char*>(&position), sizeof(position));
+    in.read(reinterpret_cast<char*>(&energy), sizeof(energy));
+    in.read(reinterpret_cast<char*>(&age), sizeof(age));
+
+    size_t genome_size;
+    in.read(reinterpret_cast<char*>(&genome_size), sizeof(genome_size));
+    genome.resize(genome_size);
+    in.read(reinterpret_cast<char*>(genome.data()), genome_size * sizeof(unsigned int));
+
+    in.read(reinterpret_cast<char*>(&pc), sizeof(pc));
+    in.read(reinterpret_cast<char*>(&color), sizeof(color));
+    in.read(reinterpret_cast<char*>(&direction), sizeof(direction));
+    in.read(reinterpret_cast<char*>(&is_dead), sizeof(is_dead));
+    in.read(reinterpret_cast<char*>(&isOrganic), sizeof(isOrganic));
+    in.read(reinterpret_cast<char*>(&nutrition_balance), sizeof(nutrition_balance));
+    in.read(reinterpret_cast<char*>(&scavenge_points), sizeof(scavenge_points));
+}
