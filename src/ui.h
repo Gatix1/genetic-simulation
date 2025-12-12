@@ -19,6 +19,7 @@ public:
     bool isPaused() const;
     int getViewMode() const;
     Bot* getOrganismRoot() const;
+    int getSpeedDivisor() const;
 
 private:
     // State
@@ -26,6 +27,7 @@ private:
     int current_view_mode = 3; // 1: Nutrition, 2: Energy, 3: Species Color
     Bot* selected_bot = nullptr;
     Bot* organism_root = nullptr;
+    int speed_divisor = 1;
 
     // Top panel state
     char seed_buffer[128] = "";

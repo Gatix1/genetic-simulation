@@ -25,6 +25,7 @@ int main(void)
 
     SetTargetFPS(300);
     UI ui;
+    int frame_counter = 0;
 
     // Main loop
     while (!WindowShouldClose())
@@ -34,8 +35,11 @@ int main(void)
 
         // --- State Update ---
         if (!ui.isPaused()) {
-            world.process();
+            if (frame_counter % ui.getSpeedDivisor() == 0) {
+                world.process();
+            }
         }
+        frame_counter = (frame_counter + 1) % 12;
 
         // --- Drawing ---
         BeginDrawing();

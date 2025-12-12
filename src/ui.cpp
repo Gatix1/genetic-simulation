@@ -15,6 +15,10 @@ Bot* UI::getOrganismRoot() const {
     return organism_root;
 }
 
+int UI::getSpeedDivisor() const {
+    return speed_divisor;
+}
+
 void UI::handleInput(World& world) {
     // Keyboard input
     // We check WantCaptureKeyboard to prevent triggering hotkeys while typing in InputText or navigating menus/modals.
@@ -87,6 +91,13 @@ void UI::drawPanels(World& world) {
             if (ImGui::MenuItem("Spawn Bots")) {
                 show_spawn_bots_modal = true;
             }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Speed")) {
+            if (ImGui::MenuItem("Original", NULL, speed_divisor == 1)) speed_divisor = 1;
+            if (ImGui::MenuItem("1/2", NULL, speed_divisor == 2)) speed_divisor = 2;
+            if (ImGui::MenuItem("1/4", NULL, speed_divisor == 4)) speed_divisor = 4;
+            if (ImGui::MenuItem("1/12", NULL, speed_divisor == 12)) speed_divisor = 12;
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
