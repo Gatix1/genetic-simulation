@@ -333,9 +333,12 @@ Vector2 Bot::_findEmptyAdjacentCell(World &world) {
         {-1,  1}, { 0,  1}, { 1,  1}  // SW, S, SE
     };
 
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(directions.begin(), directions.end(), g);
+    // Fisher-Yates shuffle using raylib's pseudo-random number generator
+    // to ensure determinism with a given seed.
+    for (size_t i = directions.size() - 1; i > 0; --i) {
+        int j = GetRandomValue(0, (int)i);
+        std::swap(directions[i], directions[j]);
+    }
 
     for (const auto& dir : directions) {
         Vector2 target_pos = {this->position.x + dir.x, this->position.y + dir.y};

@@ -1,6 +1,5 @@
 #include <raylib.h>
 #include <vector>
-#include <random>
 #include <config.h>
 #include <fstream>
 #include <stack>
