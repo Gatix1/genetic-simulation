@@ -102,7 +102,7 @@ void UI::drawWorldOverlay() const {
     // it needs to be aligned with the grid, not the UI layer.
     if (selected_bot != nullptr) {
         Vector2 pos = selected_bot->getPosition();
-        DrawRectangleLinesEx({pos.x * CELL_SIZE, pos.y * CELL_SIZE, (float)CELL_SIZE, (float)CELL_SIZE}, 3, BLACK);
+        DrawRectangleLinesEx({pos.x * CELL_SIZE, pos.y * CELL_SIZE, (float)CELL_SIZE, (float)CELL_SIZE}, 3, YELLOW);
     }
 }
 
