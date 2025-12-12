@@ -1,8 +1,16 @@
 #include <world.h>
 #include <algorithm>
 #include <stdexcept>
+#include <fstream>
 
 World::World() {}
+
+void World::newWorld(unsigned int seed, int initial_bot_count) {
+    clear();
+    this->seed = seed;
+    SetRandomSeed(seed);
+    spawnInitialBots(initial_bot_count);
+}
 
 void World::spawnInitialBots(int count) {
     for (int i = 0; i < count; i++) {
@@ -118,4 +126,53 @@ Bot* World::getBotAt(Vector2 position) {
         return nullptr;
     }
     return this->grid[(int)position.x][(int)position.y];
+}
+
+void World::clear() {
+    for (Bot* bot : bots) {
+        delete bot;
+    }
+    bots.clear();
+    for (int x = 0; x < WORLD_WIDTH; x++) {
+        for (int y = 0; y < WORLD_HEIGHT; y++) {
+            grid[x][y] = nullptr;
+        }
+    }
+    step_count = 0;
+}
+
+void World::saveWorld(const std::string& filename) {
+    std::ofstream out(filename, std::ios::binary);
+    if (!out.is_open()) return;
+
+    out.write(reinterpret_cast<char*>(&seed), sizeof(seed));
+    out.write(reinterpret_cast<char*>(&step_count), sizeof(step_count));
+    size_t bot_count = bots.size();
+    out.write(reinterpret_cast<char*>(&bot_count), sizeof(bot_count));
+
+    for (Bot* bot : bots) {
+        bot->serialize(out);
+    }
+    out.close();
+}
+
+void World::loadWorld(const std::string& filename) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in.is_open()) return;
+
+    clear();
+
+    in.read(reinterpret_cast<char*>(&seed), sizeof(seed));
+    SetRandomSeed(seed);
+
+    in.read(reinterpret_cast<char*>(&step_count), sizeof(step_count));
+    size_t bot_count;
+    in.read(reinterpret_cast<char*>(&bot_count), sizeof(bot_count));
+
+    for (size_t i = 0; i < bot_count; ++i) {
+        Bot* bot = new Bot();
+        bot->deserialize(in);
+        addBot(bot);
+    }
+    in.close();
 }

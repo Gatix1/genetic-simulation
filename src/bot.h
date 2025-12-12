@@ -1,7 +1,7 @@
 #include <raylib.h>
 #include <vector>
-#include <random>
 #include <config.h>
+#include <fstream>
 #include <stack>
 #pragma once
 
@@ -16,10 +16,16 @@ public:
     Vector2 getPosition();
     int getEnergy() const;
     Color getColor() const;
+    int getAge() const;
+    const std::vector<unsigned int>& getGenome() const;
+    const std::stack<unsigned int>& getMemory() const;
+    unsigned int getPC() const;
     int getGenomeSize() const;
     int getMemorySize() const;
     void addEnergy(int amount);
     void setPosition(Vector2 pos);
+    void serialize(std::ofstream& out);
+    void deserialize(std::ifstream& in);
     bool is_dead = false;
     bool isOrganic = false;
 private:

@@ -7,12 +7,14 @@
 #define GRID_THICKNESS 1
 #define GRID_COLOR BLACK
 
+#define TOP_PANEL_HEIGHT CELL_SIZE*2
+
 #define MUTATION_RATE 0.01f // Chance for a single gene to mutate
 #define GENOME_INSERTION_RATE 0.01f // Chance to add a gene
 #define GENOME_DELETION_RATE 0.01f // Chance to remove a gene
 
 #define BOTTOM_PANEL_HEIGHT 50
-#define SIDE_PANEL_WIDTH 250
+#define SIDE_PANEL_WIDTH 400
 
 #define INITIAL_GENOME_SIZE 64
 #define MIN_GENOME_SIZE 4
