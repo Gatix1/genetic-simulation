@@ -15,7 +15,7 @@ int main(void)
     const int screenHeight = TOP_PANEL_HEIGHT + WORLD_HEIGHT * CELL_SIZE + BOTTOM_PANEL_HEIGHT;
 
     World world = World();
-    world.newWorld((unsigned int)time(NULL), 1000);
+    world.newWorld((unsigned int)time(NULL), 10000);
 
     InitWindow(screenWidth, screenHeight, "Simulation");
     rlImGuiSetup(true); // Initialize ImGui with dark mode

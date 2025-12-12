@@ -30,7 +30,7 @@ private:
     // Top panel state
     char seed_buffer[128] = "";
     int bots_to_spawn_count = 100;
-    int initial_bots_count = 1000;
+    int initial_bots_count = 10000;
 
     // Modal state
     bool show_new_world_modal = false;

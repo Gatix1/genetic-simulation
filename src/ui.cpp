@@ -200,6 +200,54 @@ void UI::drawPanels(World& world) {
         Color c = selected_bot->getColor();
         float color[4] = { c.r/255.0f, c.g/255.0f, c.b/255.0f, 1.0f };
         ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoPicker);
+
+        ImGui::Text("Age: %d", selected_bot->getAge());
+
+        ImGui::Separator();
+        ImGui::Text("Memory Stack");
+        if (ImGui::BeginChild("MemoryStack", ImVec2(0, 100), true)) {
+            const std::stack<unsigned int> memory = selected_bot->getMemory();
+            // Display from top to bottom
+            for (int i = 0; i < (int)memory.size(); ++i) {
+                ImGui::Text("%02d: %u", (int)memory.size() - 1 - i, memory.top());
+            }
+        }
+        ImGui::EndChild();
+
+        ImGui::Separator();
+        ImGui::Text("Genome");
+        if (ImGui::BeginChild("GenomeView", ImVec2(0, 150), true)) {
+            const std::vector<unsigned int>& genome = selected_bot->getGenome();
+            unsigned int pc = selected_bot->getPC();
+            for (size_t i = 0; i < genome.size(); ++i) {
+                unsigned int val = genome[i];
+                const char* instr = "JUMP";
+                if (val == 0) instr = "MOVE";
+                else if (val == 1) instr = "TURN";
+                else if (val == 2) instr = "LOOK";
+                else if (val == 3) instr = "ATTACK";
+                else if (val == 4) instr = "PHOTO";
+                else if (val == 5) instr = "RELAT";
+                else if (val == 6) instr = "SHARE";
+                else if (val == 7) instr = "EAT";
+                else if (val == 8) instr = "REPRO";
+                else if (val == 10) instr = "BIOME";
+                else if (val == 11) instr = "CH_X";
+                else if (val == 12) instr = "CH_Y";
+                else if (val == 13) instr = "CH_NRG";
+                else if (val == 14) instr = "CH_AGE";
+                else if (val == 15) instr = "JE";
+                else if (val == 16) instr = "JNE";
+                else if (val == 17) instr = "JG";
+
+                if (i == pc) {
+                    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "> %02zu: %s (%u)", i, instr, val);
+                } else {
+                    ImGui::Text("  %02zu: %s (%u)", i, instr, val);
+                }
+            }
+        }
+        ImGui::EndChild();
     } else {
         ImGui::TextWrapped("Click on a bot in the grid to inspect it.");
     }

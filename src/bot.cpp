@@ -22,6 +22,11 @@ Vector2 Bot::getPosition() {
 int Bot::getEnergy() const { return this->energy; }
 Color Bot::getColor() const { return this->color; }
 
+int Bot::getAge() const { return this->age; }
+const std::vector<unsigned int>& Bot::getGenome() const { return this->genome; }
+const std::stack<unsigned int>& Bot::getMemory() const { return this->memory; }
+unsigned int Bot::getPC() const { return this->pc; }
+
 void Bot::addEnergy(int amount) {
     this->energy = std::min(MAX_ENERGY, this->energy + amount);
 }
