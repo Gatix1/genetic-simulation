@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 
+#include "instructions.h"
 UI::UI() {}
 
 UI::~UI() {
@@ -320,23 +321,26 @@ void UI::drawPanels(World& world) {
             for (size_t i = 0; i < genome.size(); ++i) {
                 unsigned int val = genome[i];
                 const char* instr = "JUMP";
-                if (val == 0) instr = "MOVE";
-                else if (val == 1) instr = "TURN";
-                else if (val == 2) instr = "LOOK";
-                else if (val == 3) instr = "ATTACK";
-                else if (val == 4) instr = "PHOTO";
-                else if (val == 5) instr = "RELAT";
-                else if (val == 6) instr = "SHARE";
-                else if (val == 7) instr = "EAT";
-                else if (val == 8) instr = "REPRO";
-                else if (val == 10) instr = "BIOME";
-                else if (val == 11) instr = "CH_X";
-                else if (val == 12) instr = "CH_Y";
-                else if (val == 13) instr = "CH_NRG";
-                else if (val == 14) instr = "CH_AGE";
-                else if (val == 15) instr = "JE";
-                else if (val == 16) instr = "JNE";
-                else if (val == 17) instr = "JG";
+                switch(val) {
+                    case MOVE: instr = "MOVE"; break;
+                    case TURN: instr = "TURN"; break;
+                    case LOOK: instr = "LOOK"; break;
+                    case ATTACK: instr = "ATTACK"; break;
+                    case PHOTOSYNTHIZE: instr = "PHOTO"; break;
+                    case CHECK_RELATIVE: instr = "RELAT"; break;
+                    case SHARE_ENERGY: instr = "SHARE"; break;
+                    case CONSUME_ORGANIC: instr = "EAT"; break;
+                    case REPRODUCE: instr = "REPRO"; break;
+                    case JUMP_UNCONDITIONAL: instr = "JUMP_U"; break;
+                    case CHECK_BIOME: instr = "BIOME"; break;
+                    case CHECK_X: instr = "CH_X"; break;
+                    case CHECK_Y: instr = "CH_Y"; break;
+                    case CHECK_ENERGY: instr = "CH_NRG"; break;
+                    case CHECK_AGE: instr = "CH_AGE"; break;
+                    case JUMP_IF_EQUAL: instr = "JE"; break;
+                    case JUMP_IF_NOT_EQUAL: instr = "JNE"; break;
+                    case JUMP_IF_GREATER: instr = "JG"; break;
+                }
 
                 if (i == pc) {
                     ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "> %02zu: %s (%u)", i, instr, val);

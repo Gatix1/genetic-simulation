@@ -1,6 +1,7 @@
 #include <bot.h>
 #include <world.h>
 #include <algorithm>
+#include "instructions.h"
 #include <stdexcept>
 
 
@@ -33,7 +34,7 @@ void Bot::addEnergy(int amount) {
 
 void Bot::_initRandomGenome() {
     for(int i = 0; i < INITIAL_GENOME_SIZE; i++) {
-        this->genome.push_back(GetRandomValue(0, 127)); // Instructions are 0..127 (128 total)
+        this->genome.push_back(GetRandomValue(0, MAX_INSTRUCTION_VALUE)); // Instructions are 0..127 (128 total)
     }
 }
 
@@ -378,8 +379,8 @@ void Bot::_reproduce(World& world) {
     // --- Genome Size Mutation ---
     // Insertion
     if (GetRandomValue(1, 10000) <= (int)(GENOME_INSERTION_RATE * 10000.0f) && child->genome.size() < MAX_GENOME_SIZE) {
-        int insertion_point = GetRandomValue(0, child->genome.size());
-        child->genome.insert(child->genome.begin() + insertion_point, GetRandomValue(0, 127));
+        int insertion_point = GetRandomValue(0, (int)child->genome.size());
+        child->genome.insert(child->genome.begin() + insertion_point, GetRandomValue(0, MAX_INSTRUCTION_VALUE));
     }
 
     // Deletion
@@ -392,7 +393,7 @@ void Bot::_reproduce(World& world) {
     for (int i = 0; i < child->genome.size(); i++) {
         // Check for genome mutation.
         if (GetRandomValue(1, 10000) <= (int)(MUTATION_RATE * 10000.0f)) {
-            child->genome[i] = GetRandomValue(0, 127);
+            child->genome[i] = GetRandomValue(0, MAX_INSTRUCTION_VALUE);
 
             // If a gene mutates, also mutate the color slightly.
             child->color.r = std::clamp(child->color.r + GetRandomValue(-COLOR_MUTATION_AMOUNT, COLOR_MUTATION_AMOUNT), 0, 255);
@@ -468,27 +469,27 @@ void Bot::_processGenome(World &world) {
     unsigned int instruction = this->genome[this->pc];
 
     // 0 Move Relative
-    if (instruction == 0) {
+    if (instruction == MOVE) {
         this->_move(_memoryPop() % 8, world);
         this->pc++;
     }
     // 1 Turn Relatively
-    else if (instruction == 1) {
+    else if (instruction == TURN) {
         this->_turn(_memoryPop() % 8);
         this->pc++;
     }
     // 2 Look Relatively
-    else if (instruction == 2) {
+    else if (instruction == LOOK) {
         this->_look(_memoryPop() % 8, world);
         // pc is incremented inside _look
     }
     // 3 Attack relatively
-    else if (instruction == 3) {
+    else if (instruction == ATTACK) {
         this->_attack(_memoryPop() % 8, world);
         this->pc++;
     }
     // 4 Photosynthize (free energy)
-    else if (instruction == 4) {
+    else if (instruction == PHOTOSYNTHIZE) {
         int energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN; // Balanced biome (center)
         float bot_x = this->position.x;
 
@@ -504,57 +505,57 @@ void Bot::_processGenome(World &world) {
         this->pc++;
     }
     // 5 Check if neighbor is a relative
-    else if (instruction == 5) {
+    else if (instruction == CHECK_RELATIVE) {
         this->_checkRelative(_memoryPop() % 8, world);
         this->pc++;
     }
     // 6 Share energy with neighbor
-    else if (instruction == 6) {
+    else if (instruction == SHARE_ENERGY) {
         this->_shareEnergy(_memoryPop() % 8, world);
         this->pc++;
     }
     // 7 Consume Organic
-    else if (instruction == 7) {
+    else if (instruction == CONSUME_ORGANIC) {
         this->_consumeOrganic(_memoryPop() % 8, world);
         this->pc++;
     }
     // 8 Reproduce
-    else if (instruction == 8) {
+    else if (instruction == REPRODUCE) {
         this->_reproduce(world);
         this->pc++;
     }
     // 9 (Create adjusting bot) - Replaced to unconditional jump for now.
-    else if (instruction == 9) {
+    else if (instruction == JUMP_UNCONDITIONAL) {
         // Here was some other functionality, i replaced it with an uncodintional jump for now.
         this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
     }
     // 10 Check biome
-    else if (instruction == 10) {
+    else if (instruction == CHECK_BIOME) {
         this->_checkBiome();
         this->pc++;
     }
     // 11 Check X coordinate
-    else if (instruction == 11) {
+    else if (instruction == CHECK_X) {
         this->_checkX();
         this->pc++;
     }
     // 12 Check Y coordinate
-    else if (instruction == 12) {
+    else if (instruction == CHECK_Y) {
         this->_checkY();
         this->pc++;
     }
     // 13 Check Energy Level
-    else if (instruction == 13) {
+    else if (instruction == CHECK_ENERGY) {
         this->_checkEnergy();
         this->pc++;
     }
     // 14 Check Age
-    else if (instruction == 14) {
+    else if (instruction == CHECK_AGE) {
         this->_checkAge();
         this->pc++;
     }
     // 15 Jump If Equal (JE)
-    else if (instruction == 15) {
+    else if (instruction == JUMP_IF_EQUAL) {
         if (_memoryPop() == _memoryPop()) {
             this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
         } else {
@@ -562,7 +563,7 @@ void Bot::_processGenome(World &world) {
         }
     }
     // 16 Jump If Not Equal (JNE)
-    else if (instruction == 16) {
+    else if (instruction == JUMP_IF_NOT_EQUAL) {
         if (_memoryPop() != _memoryPop()) {
             this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
         } else {
@@ -570,7 +571,7 @@ void Bot::_processGenome(World &world) {
         }
     }
     // 17 Jump If Greater Than (JG)
-    else if (instruction == 17) {
+    else if (instruction == JUMP_IF_GREATER) {
         unsigned int val2 = _memoryPop();
         unsigned int val1 = _memoryPop();
         if (val1 > val2) {
