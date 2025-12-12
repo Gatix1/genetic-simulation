@@ -11,6 +11,7 @@ Bot::Bot() {
         (unsigned char)GetRandomValue(50, 200),
         255
     };
+    this->genome.reserve(INITIAL_GENOME_SIZE);
     _initRandomGenome();
 }
 
@@ -26,8 +27,8 @@ void Bot::addEnergy(int amount) {
 }
 
 void Bot::_initRandomGenome() {
-    for(int i = 0; i < GENOME_SIZE; i++) {
-        this->genome[i] = GetRandomValue(0, 127); // Instructions are 0..127 (128 total)
+    for(int i = 0; i < INITIAL_GENOME_SIZE; i++) {
+        this->genome.push_back(GetRandomValue(0, 127)); // Instructions are 0..127 (128 total)
     }
 }
 
@@ -224,12 +225,16 @@ void Bot::_attack(int relative_index, World& world) {
 
 int Bot::_genomeDifference(const Bot& other) const {
     int differences = 0;
-    for (size_t i = 0; i < this->genome.size(); ++i) {
+    size_t min_size = std::min(this->genome.size(), other.genome.size());
+    size_t max_size = std::max(this->genome.size(), other.genome.size());
+
+    for (size_t i = 0; i < min_size; ++i) {
         if (this->genome[i] != other.genome[i]) {
             differences++;
         }
     }
-    return differences;
+
+    return differences + (max_size - min_size);
 }
 
 void Bot::_checkRelative(int relative_index, World& world) {
@@ -248,12 +253,12 @@ void Bot::_checkRelative(int relative_index, World& world) {
 
     Bot* target_bot = world.getBotAt(target_pos);
     if (target_bot != nullptr && target_bot != this) {
-        if (_genomeDifference(*target_bot) < 2) {
-            this->pc += 2; // If 0..1 difference - It's a relative, skip next instruction
+        if (_genomeDifference(*target_bot) < 5) {
+            _memoryPush(1);
             return;
         }
     }
-    this->pc += 1; // Not a relative or no bot found
+    _memoryPush(0);
 }
 
 void Bot::_shareEnergy(int relative_index, World& world) {
@@ -313,7 +318,6 @@ void Bot::_consumeOrganic(int relative_index, World& world) {
         world.removeBot(target_bot_ptr); // The organic matter is consumed and disappears
     }
     // No energy cost for consuming
-    this->pc++;
 }
 
 Vector2 Bot::_findEmptyAdjacentCell(World &world) {
@@ -365,12 +369,27 @@ void Bot::_reproduce(World& world) {
     child->color = this->color;
     child->nutrition_balance = 0; // Child starts with a neutral dietary balance
     child->genome = this->genome; // This performs a deep copy of the parent's genome
+
+    // --- Genome Size Mutation ---
+    // Insertion
+    if (GetRandomValue(1, 10000) <= (int)(GENOME_INSERTION_RATE * 10000.0f) && child->genome.size() < MAX_GENOME_SIZE) {
+        int insertion_point = GetRandomValue(0, child->genome.size());
+        child->genome.insert(child->genome.begin() + insertion_point, GetRandomValue(0, 127));
+    }
+
+    // Deletion
+    if (GetRandomValue(1, 10000) <= (int)(GENOME_DELETION_RATE * 10000.0f) && child->genome.size() > MIN_GENOME_SIZE) {
+        int deletion_point = GetRandomValue(0, child->genome.size() - 1);
+        child->genome.erase(child->genome.begin() + deletion_point);
+    }
+
+    // --- Gene Value Mutation ---
     for (int i = 0; i < child->genome.size(); i++) {
         // Check for genome mutation.
         if (GetRandomValue(1, 10000) <= (int)(MUTATION_RATE * 10000.0f)) {
             child->genome[i] = GetRandomValue(0, 127);
 
-            // If the genome mutates, also mutate the color slightly.
+            // If a gene mutates, also mutate the color slightly.
             child->color.r = std::clamp(child->color.r + GetRandomValue(-COLOR_MUTATION_AMOUNT, COLOR_MUTATION_AMOUNT), 0, 255);
             child->color.g = std::clamp(child->color.g + GetRandomValue(-COLOR_MUTATION_AMOUNT, COLOR_MUTATION_AMOUNT), 0, 255);
             child->color.b = std::clamp(child->color.b + GetRandomValue(-COLOR_MUTATION_AMOUNT, COLOR_MUTATION_AMOUNT), 0, 255);
@@ -386,6 +405,14 @@ void Bot::setPosition(Vector2 pos) {
 
 void Bot::render(int view_mode) {
     this->render(view_mode, 255); // Call the main render function with full opacity
+}
+
+int Bot::getGenomeSize() const {
+    return this->genome.size();
+}
+
+int Bot::getMemorySize() const {
+    return this->memory.size();
 }
 
 void Bot::render(int view_mode, unsigned char alpha_override) {
@@ -435,33 +462,33 @@ void Bot::_processGenome(World &world) {
     this->pc %= this->genome.size();
     unsigned int instruction = this->genome[this->pc];
 
-    // 0..7 Move Relative
-    if (instruction < 8) {
-        this->_move(instruction, world);
+    // 0 Move Relative
+    if (instruction == 0) {
+        this->_move(_memoryPop() % 8, world);
         this->pc++;
     }
-    // 8..15 Turn Relatively
-    else if (instruction < 16) {
-        this->_turn(instruction - 8);
+    // 1 Turn Relatively
+    else if (instruction == 1) {
+        this->_turn(_memoryPop() % 8);
         this->pc++;
     }
-    // 16..23 Look Relatively
-    else if (instruction < 24) {
-        this->_look(instruction - 16, world);
+    // 2 Look Relatively
+    else if (instruction == 2) {
+        this->_look(_memoryPop() % 8, world);
         // pc is incremented inside _look
     }
-    // 24..31 Attack relatively
-    else if (instruction < 32) {
-        this->_attack(instruction - 24, world);
+    // 3 Attack relatively
+    else if (instruction == 3) {
+        this->_attack(_memoryPop() % 8, world);
         this->pc++;
     }
-    // 32..39 Photosynthize (free energy) 8 instructions to make this behavior more common
-    else if (instruction < 40) {
-        int energy_gain = HIGH_PHOTOSYNTHIZE_ENERGY_GAIN; // Balanced biome (center)
+    // 4 Photosynthize (free energy)
+    else if (instruction == 4) {
+        int energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN; // Balanced biome (center)
         float bot_x = this->position.x;
 
         if (bot_x < WORLD_WIDTH / 3.0f) {
-            energy_gain = PHOTOSYNTHIZE_ENERGY_GAIN; // Sunny biome (left)
+            energy_gain = HIGH_PHOTOSYNTHIZE_ENERGY_GAIN; // Sunny biome (left)
         } else if (bot_x >= 2.0f * WORLD_WIDTH / 3.0f) {
             energy_gain = LOW_PHOTOSYNTHIZE_ENERGY_GAIN; // Dark biome (right)
         }
@@ -471,45 +498,108 @@ void Bot::_processGenome(World &world) {
         this->scavenge_points = std::max(0, this->scavenge_points - 1); // Photosynthesis is not scavenging
         this->pc++;
     }
-    // 40..47 Check if neighbor is a relative
-    else if (instruction < 48) {
-        this->_checkRelative(instruction - 40, world);
-        // pc is incremented inside _checkRelative
-    }
-    // 48..55 Share energy with neighbor
-    else if (instruction < 56) {
-        this->_shareEnergy(instruction - 48, world);
+    // 5 Check if neighbor is a relative
+    else if (instruction == 5) {
+        this->_checkRelative(_memoryPop() % 8, world);
         this->pc++;
     }
-    // 56..60 Consume Organic
-    else if (instruction < 61) {
-        this->_consumeOrganic(instruction - 56, world);
-        // pc is incremented inside _consumeOrganic
+    // 6 Share energy with neighbor
+    else if (instruction == 6) {
+        this->_shareEnergy(_memoryPop() % 8, world);
+        this->pc++;
     }
-    // 61 Reproduce
-    else if (instruction == 61) {
+    // 7 Consume Organic
+    else if (instruction == 7) {
+        this->_consumeOrganic(_memoryPop() % 8, world);
+        this->pc++;
+    }
+    // 8 Reproduce
+    else if (instruction == 8) {
         this->_reproduce(world);
         this->pc++;
     }
-    // 62 (Create adjusting bot) - Replaced to unconditional jump for now.
-    else if (instruction == 62) {
+    // 9 (Create adjusting bot) - Replaced to unconditional jump for now.
+    else if (instruction == 9) {
         // Here was some other functionality, i replaced it with an uncodintional jump for now.
-        this->pc += this->genome[(this->pc + 1) % GENOME_SIZE] % 10;
+        this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
     }
-    // 63 Check biome
-    else if (instruction == 63) {
+    // 10 Check biome
+    else if (instruction == 10) {
         this->_checkBiome();
+        this->pc++;
     }
-    // 64..127 Unconditional Jump (Default action)
+    // 11 Check X coordinate
+    else if (instruction == 11) {
+        this->_checkX();
+        this->pc++;
+    }
+    // 12 Check Y coordinate
+    else if (instruction == 12) {
+        this->_checkY();
+        this->pc++;
+    }
+    // 13 Check Energy Level
+    else if (instruction == 13) {
+        this->_checkEnergy();
+        this->pc++;
+    }
+    // 14 Check Age
+    else if (instruction == 14) {
+        this->_checkAge();
+        this->pc++;
+    }
+    // 15 Jump If Equal (JE)
+    else if (instruction == 15) {
+        if (_memoryPop() == _memoryPop()) {
+            this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
+        } else {
+            this->pc += 2; // Skip the jump parameter
+        }
+    }
+    // 16 Jump If Not Equal (JNE)
+    else if (instruction == 16) {
+        if (_memoryPop() != _memoryPop()) {
+            this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
+        } else {
+            this->pc += 2; // Skip the jump parameter
+        }
+    }
+    // 17 Jump If Greater Than (JG)
+    else if (instruction == 17) {
+        unsigned int val2 = _memoryPop();
+        unsigned int val1 = _memoryPop();
+        if (val1 > val2) {
+            this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
+        } else {
+            this->pc += 2; // Skip the jump parameter
+        }
+    }
+    // 18..127 Unconditional Jump (Default action)
     else {
-        this->pc += this->genome[(this->pc + 1) % GENOME_SIZE] % 10; // Jump 0-9 forward
+        this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10; // Jump 0-9 forward
     }
 }
 
 void Bot::_checkBiome() {
-    if (this->position.x < WORLD_WIDTH / 3.0f) this->pc += 1; // Sunny biome
-    else if (this->position.x < 2.0f * WORLD_WIDTH / 3.0f) this->pc += 2; // Balanced biome
-    else this->pc += 3; // Dark biome
+    if (this->position.x < WORLD_WIDTH / 3.0f) _memoryPush(1); // Sunny biome
+    else if (this->position.x < 2.0f * WORLD_WIDTH / 3.0f) _memoryPush(2); // Balanced biome
+    else _memoryPush(3); // Dark biome
+}
+
+void Bot::_checkX() {
+    _memoryPush((unsigned int)this->position.x);
+}
+
+void Bot::_checkY() {
+    _memoryPush((unsigned int)this->position.y);
+}
+
+void Bot::_checkEnergy() {
+    _memoryPush((unsigned int)this->energy);
+}
+
+void Bot::_checkAge() {
+    _memoryPush((unsigned int)this->age);
 }
 
 void Bot::process(World& world) {
@@ -548,6 +638,22 @@ void Bot::process(World& world) {
 void Bot::die(World& world) {
     this->isOrganic = true;
     // The corpse retains the energy the bot had at the moment of death.
+}
+
+void Bot::_memoryPush(unsigned int value) {
+    if (this->memory.size() < MEMORY_SIZE) {
+        this->memory.push(value);
+    }
+}
+
+unsigned int Bot::_memoryPop() {
+    if (!this->memory.empty()) {
+        unsigned int temp = this->memory.top();
+        this->memory.pop();
+        return temp;
+    } else {
+        return 0;
+    }
 }
 
 void Bot::serialize(std::ofstream& out) {
