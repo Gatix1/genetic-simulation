@@ -110,5 +110,9 @@ void UI::_drawSidePanel() const {
         DrawText(status_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 40, 20, status_color);
         std::string energy_text = "Energy: " + std::to_string(selected_bot->getEnergy());
         DrawText(energy_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 70, 20, RAYWHITE);
+        std::string genome_size_text = "Genome Size: " + std::to_string(selected_bot->getGenomeSize());
+        DrawText(genome_size_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 100, 20, RAYWHITE);
+        std::string memory_size_text = "Memory Size: " + std::to_string(selected_bot->getMemorySize());
+        DrawText(memory_size_text.c_str(), WORLD_WIDTH * CELL_SIZE + 10, 130, 20, RAYWHITE);
     }
 }
