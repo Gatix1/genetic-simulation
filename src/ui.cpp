@@ -14,7 +14,7 @@ UI::~UI() {
 }
 
 bool UI::isPaused() const {
-    return is_paused || is_scanning_relatives;
+    return is_paused || is_scanning_relatives || genome_analyzer.isOpen();
 }
 
 int UI::getViewMode() const {
@@ -44,10 +44,14 @@ void UI::handleInput(World& world) {
         if (IsKeyPressed(KEY_SPACE) && !is_scanning_relatives) is_paused = !is_paused;
         if (IsKeyPressed(KEY_ONE)) current_view_mode = 1;
         if (IsKeyPressed(KEY_TWO)) current_view_mode = 2;
+        if (IsKeyPressed(KEY_G) && selected_bot != nullptr && !selected_bot->isOrganic) {
+            genome_analyzer.analyze(selected_bot);
+        }
     }
 
     // Mouse input
-    if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
+    // Don't allow deselection if the genome analyzer is open
+    if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !genome_analyzer.isOpen()) {
         selected_bot = nullptr;
         organism_root = nullptr;
         selected_loaded_bot = nullptr;
@@ -85,15 +89,6 @@ void UI::handleInput(World& world) {
             }
         }
     }
-
-    // State update
-    if (organism_root != nullptr && organism_root->is_dead) {
-        selected_bot = nullptr;
-        organism_root = nullptr;
-        is_scanning_relatives = false;
-        highlighted_relatives.clear();
-        scan_origin_bot = nullptr;
-    }
 }
 
 void UI::drawWorldOverlay() const {
@@ -104,6 +99,32 @@ void UI::drawWorldOverlay() const {
         Vector2 pos = selected_bot->getPosition();
         DrawRectangleLinesEx({pos.x * CELL_SIZE, pos.y * CELL_SIZE, (float)CELL_SIZE, (float)CELL_SIZE}, 3, YELLOW);
     }
+}
+
+void UI::update() {
+    // If the selected bot has died during the last world process, clear the selection.
+    // This is safe to call after world.process() but before the next frame's drawing/input.
+    if (organism_root != nullptr && organism_root->is_dead) {
+        selected_bot = nullptr;
+        organism_root = nullptr;
+        is_scanning_relatives = false;
+        highlighted_relatives.clear();
+        scan_origin_bot = nullptr;
+    }
+}
+
+void UI::closeAllModals() {
+    show_new_world_modal = false;
+    show_spawn_bots_modal = false;
+    show_save_world_modal = false;
+    show_load_world_modal = false;
+    show_save_bot_modal = false;
+    show_load_bot_modal = false;
+    // Close any active ImGui popups
+    if (ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)) {
+        ImGui::CloseCurrentPopup();
+    }
+    genome_analyzer.close();
 }
 
 void UI::drawPanels(World& world) {
@@ -171,11 +192,16 @@ void UI::drawPanels(World& world) {
     // --- Modals (Floating Windows) ---
     
     // 1. New World Modal
+    bool new_world_open = true;
     if (show_new_world_modal) {
         ImGui::OpenPopup("New World Options");
         show_new_world_modal = false;
     }
-    if (ImGui::BeginPopupModal("New World Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("New World Options", &new_world_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::Text("Enter a seed (text or number). Leave empty for random.");
         ImGui::InputText("Seed", seed_buffer, IM_ARRAYSIZE(seed_buffer));
         ImGui::InputInt("Initial Bots", &initial_bots_count);
@@ -205,11 +231,16 @@ void UI::drawPanels(World& world) {
     }
 
     // 2. Spawn Bots Modal
+    bool spawn_bots_open = true;
     if (show_spawn_bots_modal) {
         ImGui::OpenPopup("Spawn Bots Options");
         show_spawn_bots_modal = false;
     }
-    if (ImGui::BeginPopupModal("Spawn Bots Options", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Spawn Bots Options", &spawn_bots_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::InputInt("Amount", &bots_to_spawn_count);
         if (ImGui::Button("Spawn", ImVec2(0, 0))) {
             world.spawnInitialBots(bots_to_spawn_count);
@@ -221,11 +252,16 @@ void UI::drawPanels(World& world) {
     }
 
     // 3. Save World Modal
+    bool save_world_open = true;
     if (show_save_world_modal) {
         ImGui::OpenPopup("Save World");
         show_save_world_modal = false;
     }
-    if (ImGui::BeginPopupModal("Save World", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Save World", &save_world_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::InputText("Filename", save_filename_buffer, IM_ARRAYSIZE(save_filename_buffer));
         if (ImGui::Button("Save", ImVec2(0, 0))) { 
             world.saveWorld(save_filename_buffer);
@@ -237,11 +273,16 @@ void UI::drawPanels(World& world) {
     }
 
     // 4. Load World Modal
+    bool load_world_open = true;
     if (show_load_world_modal) {
         ImGui::OpenPopup("Load World");
         show_load_world_modal = false;
     }
-    if (ImGui::BeginPopupModal("Load World", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Load World", &load_world_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::InputText("Filename", save_filename_buffer, IM_ARRAYSIZE(save_filename_buffer));
         if (ImGui::Button("Load", ImVec2(0, 0))) { 
             world.loadWorld(save_filename_buffer);
@@ -256,11 +297,16 @@ void UI::drawPanels(World& world) {
     }
 
     // 5. Save Bot Modal
+    bool save_bot_open = true;
     if (show_save_bot_modal) {
         ImGui::OpenPopup("Save Bot");
         show_save_bot_modal = false;
     }
-    if (ImGui::BeginPopupModal("Save Bot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Save Bot", &save_bot_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::InputText("Filename", bot_filename_buffer, IM_ARRAYSIZE(bot_filename_buffer));
         if (ImGui::Button("Save", ImVec2(0, 0))) {
             if (selected_bot) {
@@ -278,11 +324,16 @@ void UI::drawPanels(World& world) {
     }
 
     // 6. Load Bot Modal
+    bool load_bot_open = true;
     if (show_load_bot_modal) {
         ImGui::OpenPopup("Load Bot");
         show_load_bot_modal = false;
     }
-    if (ImGui::BeginPopupModal("Load Bot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Load Bot", &load_bot_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::InputText("Filename", bot_filename_buffer, IM_ARRAYSIZE(bot_filename_buffer));
         if (ImGui::Button("Load", ImVec2(0, 0))) {
             std::ifstream in(bot_filename_buffer, std::ios::binary);
@@ -310,30 +361,6 @@ void UI::drawPanels(World& world) {
         if (selected_bot) ImGui::TextColored(ImVec4(1, 1, 0, 1), "SELECTED BOT");
         else ImGui::TextColored(ImVec4(0, 1, 1, 1), "LOADED BOT (Placement Mode)");
         ImGui::Separator();
-
-        if (selected_bot && !inspector_bot->isOrganic) {
-            if (is_scanning_relatives) {
-                if (ImGui::Button("Hide Relatives")) {
-                    is_scanning_relatives = false;
-                    highlighted_relatives.clear();
-                    scan_origin_bot = nullptr;
-                }
-            } else {
-                if (ImGui::Button("Find Relatives")) {
-                    is_scanning_relatives = true;
-                    scan_origin_bot = selected_bot;
-                    highlighted_relatives.clear();
-                    const auto& all_bots = world.getBots();
-                    for (Bot* other_bot : all_bots) {
-                        if (other_bot != scan_origin_bot && !other_bot->is_dead && !other_bot->isOrganic) {
-                            if (scan_origin_bot->genomeDifference(*other_bot) < 5) {
-                                highlighted_relatives.push_back(other_bot);
-                            }
-                        }
-                    }
-                }
-            }
-        }
 
         if (inspector_bot->isOrganic) {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Status: Organic Matter");
@@ -378,7 +405,6 @@ void UI::drawPanels(World& world) {
                     case SHARE_ENERGY: instr = "SHARE"; break;
                     case CONSUME_ORGANIC: instr = "EAT"; break;
                     case REPRODUCE: instr = "REPRO"; break;
-                    case JUMP_UNCONDITIONAL: instr = "JUMP_U"; break;
                     case CHECK_BIOME: instr = "BIOME"; break;
                     case CHECK_X: instr = "CH_X"; break;
                     case CHECK_Y: instr = "CH_Y"; break;
@@ -397,7 +423,37 @@ void UI::drawPanels(World& world) {
             }
         }
         ImGui::EndChild();
-    } else {
+        
+        ImGui::Separator();
+        if (selected_bot && !inspector_bot->isOrganic) {
+            if (is_scanning_relatives) {
+                if (ImGui::Button("Hide Relatives", ImVec2(-1, 0))) {
+                    is_scanning_relatives = false;
+                    highlighted_relatives.clear();
+                    scan_origin_bot = nullptr;
+                }
+            } else {
+                if (ImGui::Button("Find Relatives", ImVec2(-1, 0))) {
+                    // The logic for finding relatives is already here, just reusing it.
+                    is_scanning_relatives = true;
+                    scan_origin_bot = selected_bot;
+                    highlighted_relatives.clear();
+                    const auto& all_bots = world.getBots();
+                    for (Bot* other_bot : all_bots) {
+                        if (other_bot != scan_origin_bot && !other_bot->is_dead && !other_bot->isOrganic) {
+                            if (scan_origin_bot->genomeDifference(*other_bot) < 5) {
+                                highlighted_relatives.push_back(other_bot);
+                            }
+                        }
+                    }
+                }
+            }
+            if (ImGui::Button("Analyze Genome (G)", ImVec2(-1, 0))) {
+                genome_analyzer.analyze(selected_bot);
+            }
+        }
+    }
+    else {
         ImGui::TextWrapped("Click on a bot in the grid to inspect it.");
     }
     ImGui::End();
@@ -431,4 +487,15 @@ void UI::drawPanels(World& world) {
     if (ImGui::RadioButton("Species (2)", current_view_mode == 2)) current_view_mode = 2;
 
     ImGui::End();
+
+    // Draw the genome analyzer window if it's open
+    if (genome_analyzer.isOpen()) {
+        ImGui::SetNextWindowPos(ImVec2(0,0));
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::Begin("GenomeAnalyzerDimBg", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0), ImGui::GetIO().DisplaySize, ImGui::GetColorU32(ImGuiCol_ModalWindowDimBg));
+        ImGui::End();
+    }
+    genome_analyzer.draw();
 }

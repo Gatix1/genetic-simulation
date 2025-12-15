@@ -9,6 +9,7 @@ class World; // Forward declaration
 
 class Bot {
 public:
+    Bot(const Bot& other) = default; // Add default copy constructor
     Bot();
     void render(int view_mode);
     void render(int view_mode, unsigned char alpha_override);
@@ -23,6 +24,7 @@ public:
     unsigned int getPC() const;
     int getGenomeSize() const;
     int getMemorySize() const;
+    unsigned int getDirection() const;
     void addEnergy(int amount);
     void setPosition(Vector2 pos);
     void serialize(std::ofstream& out);
@@ -42,7 +44,7 @@ private:
     unsigned int _memoryPop();
     void _constrainPosition();
     void die(World& world);
-    void _reproduce(World& world);
+    void _reproduce(World& world); 
     Vector2 _findEmptyAdjacentCell(World& world);
     void _processGenome(World& world);
     void _attack(int relative_index, World& world);
@@ -59,7 +61,7 @@ private:
     void _checkAge();
     void _consumeOrganic(int relative_index, World& world);
     int _genomeDifference(const Bot& other) const;
-    void _constrainPosition(Vector2 &pos);
+    void _constrainPosition(Vector2 &pos, const World& world);
     int nutrition_balance = 0; // Negative for carnivore, positive for vegetarian
     int scavenge_points = 0; // Tracks how much a bot has scavenged (modified by eating corpses)
 };

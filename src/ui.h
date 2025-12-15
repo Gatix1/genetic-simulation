@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "world.h"
 #include "imgui.h"
+#include "GenomeAnalyzer.h"
 #include "config.h"
 
 // The UI class handles the overlay interface using Dear ImGui.
@@ -15,19 +16,20 @@ public:
     void handleInput(World& world);
     void drawWorldOverlay() const;
     void drawPanels(const World& world);
+    void update();
     void drawPanels(World& world);
-
-    bool isPaused() const;
+    bool isPaused() const; // Note: isPaused() is now const
     int getViewMode() const;
     Bot* getOrganismRoot() const;
     int getSpeedDivisor() const;
 
     bool isScanningRelatives() const;
     const std::vector<Bot*>& getHighlightedRelatives() const;
+    void closeAllModals();
 
 private:
     // State
-    bool is_paused = false;
+    bool is_paused = false; // Main simulation pause
     int current_view_mode = 2; // 1: Nutrition, 2: Species Color
     Bot* selected_bot = nullptr;
     Bot* organism_root = nullptr;
@@ -60,4 +62,7 @@ private:
     bool show_save_bot_modal = false;
     bool show_load_bot_modal = false;
     char bot_filename_buffer[128] = "bot.save";
+
+    // Analysis tools
+    GenomeAnalyzer genome_analyzer;
 };

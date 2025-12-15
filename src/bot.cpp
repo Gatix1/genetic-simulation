@@ -27,6 +27,7 @@ int Bot::getAge() const { return this->age; }
 const std::vector<unsigned int>& Bot::getGenome() const { return this->genome; }
 const std::stack<unsigned int>& Bot::getMemory() const { return this->memory; }
 unsigned int Bot::getPC() const { return this->pc; }
+unsigned int Bot::getDirection() const { return this->direction; }
 
 void Bot::addEnergy(int amount) {
     this->energy = std::min(MAX_ENERGY, this->energy + amount);
@@ -36,17 +37,6 @@ void Bot::_initRandomGenome() {
     for(int i = 0; i < INITIAL_GENOME_SIZE; i++) {
         this->genome.push_back(GetRandomValue(0, MAX_INSTRUCTION_VALUE)); // Instructions are 0..127 (128 total)
     }
-}
-
-void Bot::_constrainPosition() {
-    if (this->position.x < 0)
-        this->position.x = WORLD_WIDTH - 1;
-    if (this->position.x >= WORLD_WIDTH)
-        this->position.x = 0;
-    if (this->position.y < 0)
-        this->position.y = WORLD_HEIGHT - 1;
-    if (this->position.y >= WORLD_HEIGHT)
-        this->position.y = 0;
 }
 
 void Bot::_move(int relative_index, World& world) {
@@ -86,14 +76,14 @@ void Bot::_move(int relative_index, World& world) {
     
     Vector2 target_pos = { this->position.x + dpos.x, this->position.y + dpos.y };
 
-    // Check for horizontal boundaries
-    if (target_pos.x < 0 || target_pos.x >= WORLD_WIDTH) {
-        return; // Hit a solid horizontal wall, do not move.
+    // For the main world, wrap vertically and block horizontally.
+    // For local simulation, clamp to all edges.
+    if (world.getWidth() == WORLD_WIDTH && world.getHeight() == WORLD_HEIGHT) {
+        if (target_pos.x < 0 || target_pos.x >= WORLD_WIDTH) return; // Hit a solid horizontal wall
+        if (target_pos.y < 0) target_pos.y = WORLD_HEIGHT - 1;       // Wrap vertically
+        if (target_pos.y >= WORLD_HEIGHT) target_pos.y = 0;
     }
-
-    // Wrap vertically
-    if (target_pos.y < 0) target_pos.y = WORLD_HEIGHT - 1;
-    if (target_pos.y >= WORLD_HEIGHT) target_pos.y = 0;
+    _constrainPosition(target_pos, world);
 
     if (world.getBotAt(target_pos) != nullptr) return; // Target cell is occupied, do not move.
 
@@ -101,8 +91,6 @@ void Bot::_move(int relative_index, World& world) {
 
     // Update position to the calculated target position
     this->position = target_pos;
-
-    this->_constrainPosition(); // Constrain before updating grid
 
     // Notify the world about the position change to keep the grid synchronized.
     world.updateBotPosition(this, old_pos);
@@ -112,15 +100,15 @@ void Bot::_move(int relative_index, World& world) {
 /*
 * Overload of _constrainPosition to apply constraints to a passed Vector2
 */
-void Bot::_constrainPosition(Vector2 &pos) {
+void Bot::_constrainPosition(Vector2 &pos, const World& world) {
     if (pos.x < 0)
         pos.x = 0; // Clamp to left edge
-    if (pos.x >= WORLD_WIDTH)
-        pos.x = WORLD_WIDTH - 1; // Clamp to right edge
+    if (pos.x >= world.getWidth())
+        pos.x = world.getWidth() - 1; // Clamp to right edge
     if (pos.y < 0)
-        pos.y = WORLD_HEIGHT - 1;
-    if (pos.y >= WORLD_HEIGHT)
         pos.y = 0;
+    if (pos.y >= world.getHeight())
+        pos.y = world.getHeight() - 1;
 }
 
 void Bot::_turn(int relative_index) {
@@ -219,7 +207,7 @@ void Bot::_attack(int relative_index, World& world) {
     Vector2 dpos = DIRECTIONS[int(target_direction_index)];
 
     Vector2 target_pos = {this->position.x + dpos.x, this->position.y + dpos.y};
-    _constrainPosition(target_pos);
+    _constrainPosition(target_pos, world); 
 
     Bot *target_bot_ptr = world.getBotAt(target_pos);
     if (target_bot_ptr != nullptr && target_bot_ptr != this && !target_bot_ptr->isOrganic) {
@@ -319,7 +307,7 @@ void Bot::_consumeOrganic(int relative_index, World& world) {
     Vector2 dpos = DIRECTIONS[target_direction_index];
 
     Vector2 target_pos = { this->position.x + dpos.x, this->position.y + dpos.y };
-    _constrainPosition(target_pos);
+    _constrainPosition(target_pos, world); 
 
     Bot *target_bot_ptr = world.getBotAt(target_pos);
     if (target_bot_ptr != nullptr && target_bot_ptr->isOrganic) {
@@ -347,12 +335,7 @@ Vector2 Bot::_findEmptyAdjacentCell(World &world) {
     for (const auto& dir : directions) {
         Vector2 target_pos = {this->position.x + dir.x, this->position.y + dir.y};
 
-        // Do not wrap horizontally, just check if it's a valid position
-        if (target_pos.x < 0 || target_pos.x >= WORLD_WIDTH) continue;
-
-        // Wrap vertically
-        if (target_pos.y < 0) target_pos.y = WORLD_HEIGHT - 1;
-        if (target_pos.y >= WORLD_HEIGHT) target_pos.y = 0;
+        _constrainPosition(target_pos, world);
 
         if (world.getBotAt(target_pos) == nullptr) {
             return target_pos; // Found an empty cell
@@ -524,37 +507,37 @@ void Bot::_processGenome(World &world) {
         this->_reproduce(world);
         this->pc++;
     }
-    // 9 (Create adjusting bot) - Replaced to unconditional jump for now.
-    else if (instruction == JUMP_UNCONDITIONAL) {
-        // Here was some other functionality, i replaced it with an uncodintional jump for now.
-        this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
+    // 17+: Unconditional Jump (using instruction value as offset)
+    else if (instruction >= JUMP) {
+        this->pc += instruction;
+        this->pc %= this->genome.size();
     }
-    // 10 Check biome
+    // Check biome
     else if (instruction == CHECK_BIOME) {
         this->_checkBiome();
         this->pc++;
     }
-    // 11 Check X coordinate
+    // Check X coordinate
     else if (instruction == CHECK_X) {
         this->_checkX();
         this->pc++;
     }
-    // 12 Check Y coordinate
+    // Check Y coordinate
     else if (instruction == CHECK_Y) {
         this->_checkY();
         this->pc++;
     }
-    // 13 Check Energy Level
+    // Check Energy Level
     else if (instruction == CHECK_ENERGY) {
         this->_checkEnergy();
         this->pc++;
     }
-    // 14 Check Age
+    // Check Age
     else if (instruction == CHECK_AGE) {
         this->_checkAge();
         this->pc++;
     }
-    // 15 Jump If Equal (JE)
+    // Jump If Equal (JE)
     else if (instruction == JUMP_IF_EQUAL) {
         if (_memoryPop() == _memoryPop()) {
             this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
@@ -562,7 +545,7 @@ void Bot::_processGenome(World &world) {
             this->pc += 2; // Skip the jump parameter
         }
     }
-    // 16 Jump If Not Equal (JNE)
+    // Jump If Not Equal (JNE)
     else if (instruction == JUMP_IF_NOT_EQUAL) {
         if (_memoryPop() != _memoryPop()) {
             this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10;
@@ -570,7 +553,7 @@ void Bot::_processGenome(World &world) {
             this->pc += 2; // Skip the jump parameter
         }
     }
-    // 17 Jump If Greater Than (JG)
+    // Jump If Greater Than (JG)
     else if (instruction == JUMP_IF_GREATER) {
         unsigned int val2 = _memoryPop();
         unsigned int val1 = _memoryPop();
@@ -579,10 +562,6 @@ void Bot::_processGenome(World &world) {
         } else {
             this->pc += 2; // Skip the jump parameter
         }
-    }
-    // 18..127 Unconditional Jump (Default action)
-    else {
-        this->pc += this->genome[(this->pc + 1) % this->genome.size()] % 10; // Jump 0-9 forward
     }
 }
 
@@ -612,14 +591,16 @@ void Bot::process(World& world) {
     this->age++;
 
     if (this->isOrganic) {
-        // Organic matter "falls" to the right if there's space.
-        Vector2 target_pos = { this->position.x + 1, this->position.y };
-
-        // Check if the target is within horizontal bounds and is empty.
-        if (target_pos.x < WORLD_WIDTH && world.getBotAt(target_pos) == nullptr) {
-            Vector2 old_pos = this->position;
-            this->position = target_pos;
-            world.updateBotPosition(this, old_pos);
+        // Organic matter "falls" to the right, but only in the main world.
+        if (world.getWidth() == WORLD_WIDTH) {
+            Vector2 target_pos = { this->position.x + 1, this->position.y };
+    
+            // Check if the target is within horizontal bounds and is empty.
+            if (target_pos.x < WORLD_WIDTH && world.getBotAt(target_pos) == nullptr) {
+                Vector2 old_pos = this->position;
+                this->position = target_pos;
+                world.updateBotPosition(this, old_pos);
+            }
         }
         return; // Organic matter does nothing else.
     }
@@ -697,4 +678,8 @@ void Bot::deserialize(std::ifstream& in) {
     in.read(reinterpret_cast<char*>(&isOrganic), sizeof(isOrganic));
     in.read(reinterpret_cast<char*>(&nutrition_balance), sizeof(nutrition_balance));
     in.read(reinterpret_cast<char*>(&scavenge_points), sizeof(scavenge_points));
+}
+
+void Bot::_constrainPosition() {
+    // This version is now unused due to the addition of world boundary checks.
 }

@@ -4,6 +4,7 @@
 
 class World {
 public:
+    World(int width, int height);
     World();
     ~World();
     void newWorld(unsigned int seed, int initial_bot_count);
@@ -19,11 +20,15 @@ public:
     long long getStepCount() const { return this->step_count; }
     unsigned int getSeed() const { return this->seed; }
     void saveWorld(const std::string& filename);
-    void loadWorld(const std::string& filename);
+    void loadWorld(const std::string& filename); 
     void clear();
+    int getWidth() const { return world_width; }
+    int getHeight() const { return world_height; }
 private:
     std::vector<Bot*> bots;
-    Bot* grid[WORLD_WIDTH][WORLD_HEIGHT] = {0};
+    std::vector<std::vector<Bot*>> grid;
+    int world_width;
+    int world_height;
     long long step_count = 0;
     unsigned int seed = 0;
 };

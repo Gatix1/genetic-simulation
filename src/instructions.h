@@ -11,8 +11,6 @@ enum Instruction {
     SHARE_ENERGY,
     CONSUME_ORGANIC,
     REPRODUCE,
-    JUMP_UNCONDITIONAL,
-
     // Checks
     CHECK_BIOME,
     CHECK_X,
@@ -23,7 +21,10 @@ enum Instruction {
     // Control Flow
     JUMP_IF_EQUAL,
     JUMP_IF_NOT_EQUAL,
-    JUMP_IF_GREATER
+    JUMP_IF_GREATER,
+
+    // Start of generic jump range
+    JUMP
 };
 
 const int MAX_INSTRUCTION_VALUE = 127;
