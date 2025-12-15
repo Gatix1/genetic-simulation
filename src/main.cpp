@@ -17,13 +17,19 @@ int main(void)
     World world = World();
     world.newWorld((unsigned int)time(NULL), 10000);
 
+    SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN);
     InitWindow(screenWidth, screenHeight, "Simulation");
     rlImGuiSetup(true); // Initialize ImGui with dark mode
 
     // Increase the global UI scale for better readability.
-    ImGui::GetIO().FontGlobalScale = 2.0f;
+    ImGui::GetIO().FontGlobalScale = 1.0f;
 
-    SetTargetFPS(300);
+    // Darken the modal window dimming background
+    ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.6f);
+
+    SetExitKey(KEY_NULL);
+
+    SetTargetFPS(0);
     UI ui;
     int frame_counter = 0;
 
@@ -37,6 +43,7 @@ int main(void)
         if (!ui.isPaused()) {
             if (frame_counter % ui.getSpeedDivisor() == 0) {
                 world.process();
+                ui.update(); // Check for dead selected bot after processing
             }
         }
         frame_counter = (frame_counter + 1) % 12;
@@ -47,7 +54,7 @@ int main(void)
             // --- Simulation & UI ---
             rlPushMatrix();
             rlTranslatef(0, (float)TOP_PANEL_HEIGHT, 0);
-            world.render(ui.getViewMode(), ui.getOrganismRoot());
+            world.render(ui.getViewMode(), ui.getOrganismRoot(), ui.getHighlightedRelatives());
             ui.drawWorldOverlay();
             rlPopMatrix();
             
