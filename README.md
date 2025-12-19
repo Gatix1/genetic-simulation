@@ -4,7 +4,7 @@ This is a 2D grid based simulation of evolution through the genetic algorithm.
 There are "bots" which have a genome, which is a program of N commands which loops.
 On the start of the program all genomes are random, those bots who succeed to survive
 and reproduce pass their genes with a slight chance of mutation which allows for evolution-like
-behavior.
+behavior. This project is purely experimental, and its purpose is generating interesting unexpected results of the simulation.
 
 ## Building from Source
 
